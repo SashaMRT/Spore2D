@@ -44,3 +44,17 @@ jobs:
       run: |
         cmake -B build -DCMAKE_BUILD_TYPE=Release
         cmake --build build -j$(nproc)
+    
+    - name: Package executable
+      run: |
+        mkdir release
+        cp build/Spore2D release/
+        strip release/Spore2D
+        DATE=$(date +%Y%m%d-%H%M%S)
+        tar -czf Spore2D-${DATE}.tar.gz -C release .
+    
+    - name: Upload Release Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Spore2D-${{ github.run_id }}
+        path: Spore2D-*.tar.gz
