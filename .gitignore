@@ -1,2 +1,3 @@
-# Ignore build output from cmake
+# Ignore build output from cmake or vscode
 build
+.cache
