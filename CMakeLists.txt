@@ -6,6 +6,8 @@ add_executable(Spore2D main.cpp)
 include(CTest)
 enable_testing()
 
+add_test(NAME Spore2D COMMAND Spore2D)
+
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
