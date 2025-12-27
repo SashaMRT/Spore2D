@@ -7,22 +7,40 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build:
+  debug-test:
     runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install CMake and dependencies
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential gcc g++ pkg-config
+        sudo apt-get install -y cmake build-essential gcc g++ pkg-config valgrind
     
-    - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+    - name: Configure Debug
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
       
-    - name: Build
+    - name: Build Debug
       run: cmake --build build -j$(nproc)
       
-    - name: Test Spore2D
-      run: ctest --test-dir build --output-on-failure -V
+    - name: Tests
+      run: |
+        ctest --test-dir build --output-on-failure -V
+        cd build
+        valgrind --leak-check=full --error-exitcode=1 --quiet ./Spore2D
+
+  release:
+    needs: debug-test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install CMake
+      run: sudo apt-get update && sudo apt-get install -y cmake build-essential gcc g++
+    
+    - name: Build Release
+      run: |
+        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build -j$(nproc)
