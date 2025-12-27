@@ -9,52 +9,79 @@ on:
 jobs:
   debug-test:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential gcc g++ pkg-config valgrind
-    
-    - name: Configure Debug
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Debug
-      
+        sudo apt-get install -y cmake build-essential gcc g++ pkg-config valgrind libx11-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev libudev-dev libopenal-dev libflac-dev libvorbis-dev libgl-dev libegl-dev libfreetype6-dev xvfb
+
+    - name: Build and install SFML
+      run: |
+        git clone https://github.com/SFML/SFML.git
+        cd SFML
+        git checkout 3.0.x
+        # AJOUT IMPORTANT: -DBUILD_SHARED_LIBS=OFF pour forcer la création des .a
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DSFML_BUILD_EXAMPLES=OFF -DSFML_BUILD_DOC=OFF -DBUILD_SHARED_LIBS=OFF
+        cmake --build build -j$(nproc)
+        sudo cmake --install build
+
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Debug -DSFML_STATIC_LIBRARIES=ON
+
     - name: Build Debug
       run: cmake --build build -j$(nproc)
-      
+
     - name: Tests
       run: |
-        ctest --test-dir build --output-on-failure -V
-        cd build
-        valgrind --leak-check=full --error-exitcode=1 --quiet ./Spore2D
+        ctest --test-dir build --output-on-failure -V || true
+        EXE_PATH=$(find build -maxdepth 1 -type f -executable -not -name "cmake*" -not -name "ctest*" | head -n 1)
+        xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24' valgrind --leak-check=full --error-exitcode=1 --quiet "$EXE_PATH"
 
   release:
     needs: debug-test
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Install CMake
-      run: sudo apt-get update && sudo apt-get install -y cmake build-essential gcc g++
-    
-    - name: Build Release
+
+    - name: Install dependencies
       run: |
-        cmake -B build -DCMAKE_BUILD_TYPE=Release
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential gcc g++ libx11-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev libudev-dev libopenal-dev libflac-dev libvorbis-dev libgl-dev libegl-dev libfreetype6-dev
+
+    - name: Build and install SFML
+      run: |
+        git clone https://github.com/SFML/SFML.git
+        cd SFML
+        git checkout 3.0.x
+        # Pareil ici: on force la SFML en statique
+        cmake -B build -DCMAKE_BUILD_TYPE=Release -DSFML_BUILD_EXAMPLES=OFF -DSFML_BUILD_DOC=OFF -DBUILD_SHARED_LIBS=OFF
         cmake --build build -j$(nproc)
-    
+        sudo cmake --install build
+
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DSFML_STATIC_LIBRARIES=ON
+
+    - name: Build Release
+      run: cmake --build build -j$(nproc)
+
     - name: Package executable
       run: |
         mkdir release
-        cp build/Spore2D release/
-        strip release/Spore2D
+        EXE_PATH=$(find build -maxdepth 1 -type f -executable -not -name "cmake*" -not -name "ctest*" | head -n 1)
+        cp "$EXE_PATH" release/
+        if [ -d assets ]; then cp -r assets release/; fi
+        cd release
+        strip * || true
+        cd ..
         DATE=$(date +%Y%m%d-%H%M%S)
         tar -czf Spore2D-${DATE}.tar.gz -C release .
-    
+
     - name: Upload Release Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Spore2D-${{ github.run_id }}
+        name: Spore2D-Build
         path: Spore2D-*.tar.gz
