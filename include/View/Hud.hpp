@@ -35,10 +35,11 @@ public:
     
     /**
      * @brief Initialise les ressources du HUD.
+     * @param windowSize La taille totale de la fenêtre (pour calculer la hauteur).
      * Charge la police d'écriture et configure les textes.
      * @return true (succés sinon false).
      */
-    bool init();
+    bool init(sf::Vector2u windowSize);
 
     /**
      * @brief Met à jour les données affichées.
@@ -53,6 +54,20 @@ public:
      */
     void draw(sf::RenderWindow& window);
 
+    /**
+     * @brief Récupère la largeur du menu.
+     * @return float La largeur en pixels.
+     * Retourne la largeur du menu pour éviter que le jeu ne soit caché par l'interface.
+     */
+    float getWidth() const { return m_width; }
+
+    /**
+     * @brief Recalcule la taille de la zone de jeu
+     * lors d'un redimensionnement de fenêtre.
+     * @param newSize La nouvelle taille de la fenêtre.
+     */
+    void onResize(sf::Vector2u newSize);
+
 // Accessible seulement par les méthodes de cette classe.
 private:
     // La police d'écriture (sinon bug sur Windows).
@@ -61,4 +76,8 @@ private:
     sf::Text m_textFps;
     // Le texte affichant les infos.
     sf::Text m_textInfo;
+    // Le rendu du menu.
+    sf::RectangleShape m_background;
+    // La largeur définie du menu.
+    float m_width;
 };

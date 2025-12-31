@@ -22,6 +22,10 @@
 // Elle permet l'utilisation de la classe Hud et de ces méthodes.
 #include "../View/Hud.hpp"
 
+// Inclusion de notre bibliothèque Renderer.
+// Elle permet l'utilisation de la classe Renderer et de ces méthodes.
+#include "../View/Renderer.hpp"
+
 /**
  * @class Application
  * @brief Le moteur de jeu. 
@@ -47,4 +51,7 @@ private:
 
     // Information sur le jeu
     Hud m_hud;
+
+    // La fenêtre de la zone de jeu
+    Renderer m_renderer;
 };

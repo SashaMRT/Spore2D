@@ -44,9 +44,12 @@ Application::Application() {
     m_window.setFramerateLimit(60);
 
     // On initialise le HUD au démarrage.
-    if (!m_hud.init()) {
+    if (!m_hud.init(m_window.getSize())) {
         std::cerr << "Erreur init HUD" << std::endl;
     }
+
+    // On initialise la zone de jeu en lui donnant la largeur du menu pour mettre le terrain à droite.
+    m_renderer.init(m_window.getSize(), m_hud.getWidth());
 
     // Debuggage (On suit la création de la fenêtre).
     std::cout << "[Application] Fenêtre créée en " << desktopMode.size.x << "x" << desktopMode.size.y << std::endl;
@@ -87,6 +90,28 @@ void Application::run() {
                     m_window.close();
                 }
             }
+            // Redimensionnement
+            // Lancer quand l'utilisateur tire sur les bords de la fenêtre.
+            if (const auto* resizeEvent = event->getIf<sf::Event::Resized>()) {
+                
+                // Récupération de la nouvelle taille
+                sf::Vector2u newSize = resizeEvent->size;
+
+                // On définit un vecteur qui part de (0,0) et au autre qui fait la taille de la fenêtre
+                // C'est notre "nouvelle vue".
+                sf::FloatRect visibleArea(sf::Vector2f(0.f, 0.f), sf::Vector2f((float)newSize.x, (float)newSize.y));
+
+                // On applique cette nouvelle vue à la fenêtre.
+                // Maintenant, 1 pixel du jeu = 1 pixel de l'écran. Pas d'étirement.
+                m_window.setView(sf::View(visibleArea));
+
+                // Donne l'info aux composants
+                // On prévient le HUD qu'il doit s'allonger
+                m_hud.onResize(newSize);
+                
+                // On prévient le Renderer qu'il a plus (ou moins) de place
+                m_renderer.onResize(newSize, m_hud.getWidth());
+            }
         }
 
         // Mise à jour de la logique (Update).
@@ -94,7 +119,10 @@ void Application::run() {
 
         // Affichage (Render).
         // On efface l'image précédente (Bug graphique sinon).
-        m_window.clear(sf::Color::Black);
+        m_window.clear(sf::Color(30, 30, 30)); // Gris foncé en fond
+
+        // On dessine le terrain de jeu (le fond noir).
+        m_renderer.draw(m_window);
 
         // On affiche le HUD à l'écran.
         m_hud.draw(m_window);

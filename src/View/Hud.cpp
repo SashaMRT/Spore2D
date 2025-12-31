@@ -32,7 +32,7 @@ Hud::Hud() :
     m_textFps(m_font),
     m_textInfo(m_font)
 {
-    // On fait rien ici car tout est fait dans le init().
+    m_width = 280.f; // Sinon il prend aussi hud
 }
 
 // -------------------------------------------------------------------------
@@ -42,7 +42,7 @@ Hud::Hud() :
 /**
  * @brief Chargement de la police et configuration des textes.
  */
-bool Hud::init() {
+bool Hud::init(sf::Vector2u windowSize) {
     // Chargement de la police
     if (!m_font.openFromFile("../assets/font.ttf")) {
         // Debuggage (en cas d'erreur)
@@ -52,6 +52,9 @@ bool Hud::init() {
 
     // Debuggage (On suit le chargement des polices).
     std::cout << "[Hud] Police chargée avec succès." << std::endl;
+
+    // 2. Configuration de la zone de jeu
+    m_background.setSize(sf::Vector2f(m_width, static_cast<float>(windowSize.y)));
 
     // Configuration du texte FPS
     m_textFps.setCharacterSize(20);                     // Taille en pixels
@@ -83,4 +86,13 @@ void Hud::draw(sf::RenderWindow& window) {
     // On dessine les textes sur la fenêtre donnée en paramètre
     window.draw(m_textFps);
     window.draw(m_textInfo);
+}
+
+/**
+ * @brief Mise à jour des dimensions du HUD.
+ */
+void Hud::onResize(sf::Vector2u newSize) {
+    // On garde la largeur fixe (m_width), mais on met à jour la hauteur
+    // correspond à la nouvelle hauteur de la fenêtre.
+    m_background.setSize(sf::Vector2f(m_width, static_cast<float>(newSize.y)));
 }
