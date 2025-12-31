@@ -19,6 +19,8 @@
 // Elle permet l'utilisation de la classe Applications et de ces méthodes.
 #include "../../include/Core/Application.hpp"
 
+// Horloge pour les FPS
+sf::Clock clockFps;
 
 // -------------------------------------------------------------------------
 // CONSTRUCTEUR
@@ -38,8 +40,13 @@ Application::Application() {
     // On crée ici la fenêtre avec la taille definit ci-dessus.
     m_window.create(desktopMode, "Spore2D Simulation");
 
-    // Limitation de FPS pour éviter la surcharge CPU
+    // Limitation de FPS pour éviter la surcharge CPU.
     m_window.setFramerateLimit(60);
+
+    // On initialise le HUD au démarrage.
+    if (!m_hud.init()) {
+        std::cerr << "Erreur init HUD" << std::endl;
+    }
 
     // Debuggage (On suit la création de la fenêtre).
     std::cout << "[Application] Fenêtre créée en " << desktopMode.size.x << "x" << desktopMode.size.y << std::endl;
@@ -57,19 +64,24 @@ Application::Application() {
  */
 void Application::run() {
 
-    // Étape 0 : Initialisation de la boucle (Application::run()).
+    // Initialisation de la boucle (Application::run()).
     std::cout << "[Application] Lancement de la boucle principale (run)." << std::endl;
 
     // Tant que la fenêtre est ouverte.
     while (m_window.isOpen()) {
-        // Étape 1 : Gestion des événements (Input).
+
+        // Calcul du temps écoulé (pour les FPS).
+        float currentTime = clockFps.restart().asSeconds();
+        float fps = 1.0f / currentTime;
+
+        // Gestion des événements (Input).
         while (const auto event = m_window.pollEvent()) {
-            // Si la croix de fermeture est pressée
+            // Si la croix de fermeture est pressée.
             if (event->is<sf::Event::Closed>()) {
-                m_window.close(); // On ferme la fenêtre, ce qui arrête la boucle while
+                m_window.close(); // On ferme la fenêtre, ce qui arrête la boucle while.
             }
 
-            // Fermer avec Echap (Bug Hyprland)
+            // Fermer avec Echap (Bug Hyprland).
             if (const auto* keyEvent = event->getIf<sf::Event::KeyPressed>()) {
                 if (keyEvent->code == sf::Keyboard::Key::Escape) {
                     m_window.close();
@@ -77,16 +89,20 @@ void Application::run() {
             }
         }
 
-        // Étape 2 : Mise à jour de la logique (Update).
-        // TODO (À faire plus tard)
+        // Mise à jour de la logique (Update).
+        m_hud.update(fps);
 
-        // Étape 3 : Affichage (Render).
-        // On efface l'image précédente (Bug graphique sinon)
+        // Affichage (Render).
+        // On efface l'image précédente (Bug graphique sinon).
         m_window.clear(sf::Color::Black);
-        // On affiche à l'écran
+
+        // On affiche le HUD à l'écran.
+        m_hud.draw(m_window);
+
+        // On affiche à l'écran.
         m_window.display();
     }
 
-    // Étape 4 : Fin de la boucle (void donc pas de return s'arrête dès la fin du message).
+    // Fin de la boucle (void donc pas de return s'arrête dès la fin du message).
     std::cout << "[Application] Fin de la boucle. Fermeture du programme." << std::endl;
 }

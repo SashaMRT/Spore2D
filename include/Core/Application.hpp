@@ -18,6 +18,10 @@
 // Elle permet l'utilisation de sf
 #include <SFML/Graphics.hpp>
 
+// Inclusion de notre bibliothèque Hud.
+// Elle permet l'utilisation de la classe Hud et de ces méthodes.
+#include "../View/Hud.hpp"
+
 /**
  * @class Application
  * @brief Le moteur de jeu. 
@@ -40,4 +44,7 @@ public:
 private:
     // La fenêtre principale du jeu
     sf::RenderWindow m_window;
+
+    // Information sur le jeu
+    Hud m_hud;
 };
