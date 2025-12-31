@@ -14,6 +14,10 @@
 // Empêche d'inclure ce fichier deux fois.
 #pragma once
 
+// Inclusion de notre bibliothèque SFML.
+// Elle permet l'utilisation de sf
+#include <SFML/Graphics.hpp>
+
 /**
  * @class Application
  * @brief Le moteur de jeu. 
@@ -21,6 +25,7 @@
  * 
  */
 class Application {
+// Accessible depuis l'extérieur (par le main.cpp par exemple).
 public:
     // Le Constructeur : Il porte TOUJOURS le même nom que la classe.
     // C'est la fonction appelée automatiquement à la création de l'objet.
@@ -30,4 +35,9 @@ public:
     // La méthode pour lancer la boucle de jeu.
     // Retourne rien car de type "void".
     void run();
+
+// Accessible seulement par les méthodes de cette classe.
+private:
+    // La fenêtre principale du jeu
+    sf::RenderWindow m_window;
 };

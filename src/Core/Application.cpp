@@ -12,7 +12,7 @@
  * 
  */
 
-// Inclusion de la bibliothèque std
+// Inclusion de la bibliothèque std.
 #include <iostream> 
 
 // Inclusion de notre bibliothèque Application.
@@ -29,10 +29,20 @@
  * C'est ici que l'on initialise les variables et que l'on crée la fenêtre.
  */
 Application::Application() {
-    // Debuggage (On suit l'éxécution du programme)
+    // Debuggage (On suit l'éxécution du programme).
     std::cout << "[Application] Initialisation en cours..." << std::endl;
 
-    // TODO (À faire plus tard)
+    // On récupère la résolution de l'écran de l'utilisateur.
+    sf::VideoMode desktopMode = sf::VideoMode::getDesktopMode();
+
+    // On crée ici la fenêtre avec la taille definit ci-dessus.
+    m_window.create(desktopMode, "Spore2D Simulation");
+
+    // Limitation de FPS pour éviter la surcharge CPU
+    m_window.setFramerateLimit(60);
+
+    // Debuggage (On suit la création de la fenêtre).
+    std::cout << "[Application] Fenêtre créée en " << desktopMode.size.x << "x" << desktopMode.size.y << std::endl;
 }
 
 // -------------------------------------------------------------------------
@@ -47,19 +57,35 @@ Application::Application() {
  */
 void Application::run() {
 
-    // Simulation d'une boucle.
-
     // Étape 0 : Initialisation de la boucle (Application::run()).
     std::cout << "[Application] Lancement de la boucle principale (run)." << std::endl;
-    
-    // Étape 1 : Gestion des événements (Input).
-    std::cout << "   -> [Input]  Vérification clavier/souris..." << std::endl;
 
-    // Étape 2 : Mise à jour de la logique (Update).
-    std::cout << "   -> [Update] Déplacement des entités (Loups, Moutons)..." << std::endl;
+    // Tant que la fenêtre est ouverte.
+    while (m_window.isOpen()) {
+        // Étape 1 : Gestion des événements (Input).
+        while (const auto event = m_window.pollEvent()) {
+            // Si la croix de fermeture est pressée
+            if (event->is<sf::Event::Closed>()) {
+                m_window.close(); // On ferme la fenêtre, ce qui arrête la boucle while
+            }
 
-    // Étape 3 : Affichage (Render).
-    std::cout << "   -> [Render] Dessin sur l'écran..." << std::endl;
+            // Fermer avec Echap (Bug Hyprland)
+            if (const auto* keyEvent = event->getIf<sf::Event::KeyPressed>()) {
+                if (keyEvent->code == sf::Keyboard::Key::Escape) {
+                    m_window.close();
+                }
+            }
+        }
+
+        // Étape 2 : Mise à jour de la logique (Update).
+        // TODO (À faire plus tard)
+
+        // Étape 3 : Affichage (Render).
+        // On efface l'image précédente (Bug graphique sinon)
+        m_window.clear(sf::Color::Black);
+        // On affiche à l'écran
+        m_window.display();
+    }
 
     // Étape 4 : Fin de la boucle (void donc pas de return s'arrête dès la fin du message).
     std::cout << "[Application] Fin de la boucle. Fermeture du programme." << std::endl;
