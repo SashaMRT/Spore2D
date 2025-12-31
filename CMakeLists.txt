@@ -10,7 +10,8 @@ include_directories(include)
 include(CTest)
 enable_testing()
 
-add_test(NAME Spore2D COMMAND Spore2D)
+add_test(NAME Spore2D COMMAND Spore2D --test)
+set_tests_properties(Spore2D PROPERTIES TIMEOUT 30)
 
 set(SOURCES
     src/main.cpp
@@ -32,6 +33,8 @@ target_link_libraries(Spore2D PRIVATE
     SFML::System 
     SFML::Audio
 )
+
+file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

@@ -1,0 +1,14 @@
+{
+   ignore_mesa_glx_driver_leaks
+   Memcheck:Leak
+   match-leak-kinds: all
+   ...
+   obj:*/libGLX_mesa.so*
+}
+{
+   ignore_sfml_gl_context_leaks
+   Memcheck:Leak
+   match-leak-kinds: all
+   ...
+   fun:_ZN2sf4priv10GlxContextC1EPS1_
+}

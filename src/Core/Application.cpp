@@ -30,7 +30,7 @@ sf::Clock clockFps;
  * @brief Constructeur de l'objet Application.
  * C'est ici que l'on initialise les variables et que l'on crée la fenêtre.
  */
-Application::Application() {
+Application::Application(bool testMode) : m_isTestMode(testMode) {
     // Debuggage (On suit l'éxécution du programme).
     std::cout << "[Application] Initialisation en cours..." << std::endl;
 
@@ -66,6 +66,9 @@ Application::Application() {
  *
  */
 void Application::run() {
+
+    // Compteur pour le test
+    int frameCount = 0;
 
     // Initialisation de la boucle (Application::run()).
     std::cout << "[Application] Lancement de la boucle principale (run)." << std::endl;
@@ -111,6 +114,15 @@ void Application::run() {
                 
                 // On prévient le Renderer qu'il a plus (ou moins) de place
                 m_renderer.onResize(newSize, m_hud.getWidth());
+            }
+        }
+
+        // Fix pour github action
+        if (m_isTestMode) {
+            frameCount++;
+            // Après 30 "tours" (environ 0.5 seconde), on ferme tout proprement.
+            if (frameCount > 30) {
+                m_window.close(); 
             }
         }
 

@@ -36,9 +36,10 @@ jobs:
 
     - name: Tests
       run: |
-        ctest --test-dir build --output-on-failure -V || true
-        EXE_PATH=$(find build -maxdepth 1 -type f -executable -not -name "cmake*" -not -name "ctest*" | head -n 1)
-        xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24' valgrind --leak-check=full --error-exitcode=1 --quiet "$EXE_PATH"
+        xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24' ctest --test-dir build --output-on-failure -V
+        cd build
+        EXE_PATH=$(find . -maxdepth 1 -type f -executable -not -name "cmake*" -not -name "ctest*" | head -n 1)
+        xvfb-run --auto-servernum --server-args='-screen 0 1024x768x24' valgrind --leak-check=full --error-exitcode=1 --quiet --suppressions=../valgrind.supp "$EXE_PATH" --test
 
   release:
     needs: debug-test

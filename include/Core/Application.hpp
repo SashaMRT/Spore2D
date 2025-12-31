@@ -40,6 +40,9 @@ public:
     // Dans notre cas, c'est la fonction qui défini le terrain.
     Application();
 
+    // On surcharge le constructeur pour accepter un paramètre (false par défaut)
+    Application(bool testMode = false);
+
     // La méthode pour lancer la boucle de jeu.
     // Retourne rien car de type "void".
     void run();
@@ -54,4 +57,7 @@ private:
 
     // La fenêtre de la zone de jeu
     Renderer m_renderer;
+
+    // Mode test
+    bool m_isTestMode;
 };
