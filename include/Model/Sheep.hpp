@@ -1,3 +1,15 @@
+/**
+ * @file Sheep.hpp
+ * @author Gael Guinaliu (rodez.gael@gmail.com)
+ * @brief Déclaration du mouton : proie pacifique et brouteuse
+ * @details Héritage d'Entity, vitesse modérée, IA de pâturage et fuite
+ * @version 0.1
+ * @date 2026-01-03
+ * 
+ * @copyright Copyright (c) 2026
+ */
+
+
 #ifndef SHEEP_HPP
 #define SHEEP_HPP
 

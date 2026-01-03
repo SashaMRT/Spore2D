@@ -1,3 +1,15 @@
+/**
+ * @file Wolf.hpp
+ * @author Gael Guinaliu (rodez.gael@gmail.com)
+ * @brief Déclaration du loup : prédateur rapide et agressif
+ * @details Héritage d'Entity, vitesse élevée, IA de chasse avancée
+ * @version 0.1
+ * @date 2026-01-03
+ * 
+ * @copyright Copyright (c) 2026
+ */
+
+
 #ifndef WOLF_HPP
 #define WOLF_HPP
 

@@ -1,3 +1,18 @@
+/**
+ * @file Wolf.cpp
+ * @author Gael Guinaliu (rodez.gael@gmail.com)
+ * @brief Implémentation du loup : prédateur chassant les moutons
+ * @details 
+ *  - IA de chasse et poursuite des moutons
+ *  - Consommation des proies pour restaurer l'énergie
+ *  - Gestion de la faim et de la mort
+ * @version 0.1
+ * @date 2026-01-03
+ * 
+ * @copyright Copyright (c) 2026
+ */
+
+
 #include "../../include/Model/Wolf.hpp"
 #include "../../include/Model/Sheep.hpp"
 #include <cmath>

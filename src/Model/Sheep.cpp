@@ -1,3 +1,18 @@
+/**
+ * @file Sheep.cpp
+ * @author Gael Guinaliu (rodez.gael@gmail.com)
+ * @brief Implémentation du mouton : proie mangeant l'herbe, fuyant les loups
+ * @details 
+ *  - IA de recherche d'herbe proche
+ *  - Consommation d'herbe pour survivre
+ *  - Comportement de fuite face aux prédateurs
+ * @version 0.1
+ * @date 2026-01-03
+ * 
+ * @copyright Copyright (c) 2026
+ */
+
+
 #include "../../include/Model/Sheep.hpp"
 #include "../../include/Model/Wolf.hpp"
 #include <cstdlib>
