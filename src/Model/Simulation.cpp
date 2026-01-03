@@ -11,6 +11,7 @@
  * @date 2026-01-03
  * 
  * @copyright Copyright (c) 2026
+ *
  */
 
 
@@ -155,4 +156,13 @@ void ecosystemDraw(sf::RenderWindow& window) {
             w.shape.setPosition(w.pos); 
             window.draw(w.shape); 
         }
+}
+
+// Retourne la taille actuelle des vecteurs
+EcosystemStats getEcosystemStats() {
+    return {
+        static_cast<int>(ecosystem_grass.size()),
+        static_cast<int>(ecosystem_sheeps.size()),
+        static_cast<int>(ecosystem_wolves.size())
+    };
 }

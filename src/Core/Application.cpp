@@ -19,6 +19,10 @@
 // Elle permet l'utilisation de la classe Applications et de ces méthodes.
 #include "../../include/Core/Application.hpp"
 
+// Inclusion de notre bibliothèque Simulation.
+// Elle permet l'utilisation de la classe Simulation et de ces méthodes.
+#include "../../include/Model/Simulation.hpp"
+
 // Horloge pour les FPS
 sf::Clock clockFps;
 
@@ -127,7 +131,8 @@ void Application::run() {
         }
 
         // Mise à jour de la logique (Update).
-        m_hud.update(fps);
+        EcosystemStats stats = getEcosystemStats(); // On récupére les informations
+        m_hud.update(fps, stats.grass, stats.sheep, stats.wolves); // On les envoies au menu
 
         // Affichage (Render).
         // On efface l'image précédente (Bug graphique sinon).

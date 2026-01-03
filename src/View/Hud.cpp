@@ -1,13 +1,13 @@
 /**
  * @file Hud.cpp
  * @author Sasha Marie te Rehorst (sasha.marieterehorst@gmail.com)
- * @brief Implémentation de la classe Hud : Représentation du gestionnaire d'informations
- * @details Contient le chargement des polices et de mise à jour des textes.
- * @version 0.1
- * @date 2025-12-31
- * 
- * @copyright Copyright (c) 2025
- * 
+ * @brief Implémentation de la classe Hud : Gestion de l'interface utilisateur.
+ * @details Gère l'affichage du menu (Fond, Titre, Statistiques, FPS).
+ * @version 0.2
+ * @date 2026-01-03
+ *
+ * @copyright Copyright (c) 2026
+ *
  */
 
 // Inclusion de la bibliothèque std.
@@ -17,7 +17,6 @@
 #include <string>
 
 // Inclusion de notre bibliothèque Hud.
-// Elle permet l'utilisation de la classe Hud et de ces méthodes.
 #include "../../include/View/Hud.hpp"
 
 // -------------------------------------------------------------------------
@@ -26,13 +25,15 @@
 
 /**
  * @brief Constructeur de l'objet Hud.
- * C'est ici que l'on initialise les variables.
+ * Initialise les variables et définit la largeur du menu.
  */
 Hud::Hud() :
     m_textFps(m_font),
-    m_textInfo(m_font)
+    m_textInfo(m_font),
+    m_textTitle(m_font)
 {
-    m_width = 280.f; // Sinon il prend aussi hud
+    // On définit une largeur pour notre menu (250 pixels).
+    m_width = 250.f; 
 }
 
 // -------------------------------------------------------------------------
@@ -40,59 +41,129 @@ Hud::Hud() :
 // -------------------------------------------------------------------------
 
 /**
- * @brief Chargement de la police et configuration des textes.
+ * @brief Initialise toutes les ressources (Textes, Formes, Couleurs).
+ * @param windowSize La taille actuelle de la fenêtre (pour la hauteur du fond).
+ * @return true si tout s'est bien passé, false sinon.
  */
 bool Hud::init(sf::Vector2u windowSize) {
-    // Chargement de la police
+    
+    // Chargement de la police d'écriture.
+    // C'est le fichier .ttf qui définit le style des lettres.
     if (!m_font.openFromFile("../assets/font.ttf")) {
-        // Debuggage (en cas d'erreur)
-        std::cerr << "[ERREUR] Hud: Impossible de trouver 'assets/font.ttf'" << std::endl;
-        return false; // Echec
+        std::cerr << "[ERREUR] Hud: Impossible de charger 'assets/font.ttf'." << std::endl;
+        return false;
     }
 
-    // Debuggage (On suit le chargement des polices).
-    std::cout << "[Hud] Police chargée avec succès." << std::endl;
-
-    // 2. Configuration de la zone de jeu
+    // -----------------------------------------------------------
+    // LE FOND DU MENU
+    // -----------------------------------------------------------
+    
+    // On donne au fond la largeur du menu et la hauteur de la fenêtre.
     m_background.setSize(sf::Vector2f(m_width, static_cast<float>(windowSize.y)));
+    
+    // On met une couleur noir transparent (Alpha = 150 sur 255) pour voir le jeu derrière.
+    m_background.setFillColor(sf::Color(0, 0, 0, 150)); 
+    
+    // On ajoute une bordure pour délimiter la zone.
+    m_background.setOutlineThickness(-1.f); 
+    m_background.setOutlineColor(sf::Color(255, 255, 255, 30));
 
-    // Configuration du texte FPS
-    m_textFps.setCharacterSize(20);                     // Taille en pixels
-    m_textFps.setFillColor(sf::Color::Green);           // Couleur verte
-    m_textFps.setPosition(sf::Vector2f(10.f, 10.f));    // En haut à gauche
-    m_textFps.setString("FPS: 0");                      // Affichage FPS
+    // -----------------------------------------------------------
+    // FPS 
+    // -----------------------------------------------------------
+    
+    m_textFps.setCharacterSize(14);                 // Taille du texte petite
+    m_textFps.setFillColor(sf::Color::Green);       // Couleur verte
+    m_textFps.setPosition(sf::Vector2f(10.f, 10.f));// En haut à gauche avec une petite marge
+    m_textFps.setString("FPS: --");
 
-    // Configuration du texte d'information
-    m_textInfo.setCharacterSize(16);                    // Taille en pixels
-    m_textInfo.setFillColor(sf::Color::White);          // Couleur blanc
-    m_textInfo.setPosition(sf::Vector2f(10.f, 40.f));   // Juste en dessous des FPS
-    m_textInfo.setString("Simulation: Prete");          // Etat de la simulation
+    // -----------------------------------------------------------
+    // STATISTIQUES
+    // -----------------------------------------------------------
 
-    return true; // Succès
+    m_textTitle.setString("STATISTIQUES");
+    m_textTitle.setCharacterSize(18);               // Taille moyenne
+    m_textTitle.setFillColor(sf::Color::White);     // Blanc
+    m_textTitle.setStyle(sf::Text::Bold);           // En gras
+
+    // Calcul pour centrer le texte :
+    // On récupère les dimensions du texte.
+    sf::FloatRect bounds = m_textTitle.getLocalBounds();
+    
+    // On définit le "point d'origine" du texte pile en son milieu.
+    m_textTitle.setOrigin(sf::Vector2f(
+        bounds.position.x + bounds.size.x / 2.0f,
+        bounds.position.y + bounds.size.y / 2.0f
+    ));
+    
+    // On place ce point au milieu du menu et à 65px de hauteur.
+    m_textTitle.setPosition(sf::Vector2f(m_width / 2.0f, 65.f)); 
+
+    // -----------------------------------------------------------
+    // LA BARRE DE SÉPARATION
+    // -----------------------------------------------------------
+    
+    // Une ligne blanche horizontale.
+    m_separator.setSize(sf::Vector2f(m_width - 40.f, 2.f)); // Largeur du menu moins les marges
+    m_separator.setFillColor(sf::Color::White);
+    
+    // On centre aussi l'origine de la barre.
+    m_separator.setOrigin(sf::Vector2f(m_separator.getSize().x / 2.0f, m_separator.getSize().y / 2.0f));
+    
+    // On la place juste en dessous du titre.
+    m_separator.setPosition(sf::Vector2f(m_width / 2.0f, 85.f)); 
+
+    // -----------------------------------------------------------
+    // LES INFORMATIONS
+    // -----------------------------------------------------------
+    
+    m_textInfo.setCharacterSize(16);
+    m_textInfo.setFillColor(sf::Color(220, 220, 220)); // Blanc
+    m_textInfo.setPosition(sf::Vector2f(20.f, 105.f)); // Alignées à gauche, sous la barre
+    m_textInfo.setLineSpacing(1.5f);                   // On espace les lignes pour que ce soit aéré
+    m_textInfo.setString("Chargement...");
+
+    return true; // Tout est bon
 }
 
 /**
- * @brief Mise à jour du texte des FPS.
+ * @brief Met à jour les textes avec les nombres actuels du jeu.
+ * Appelée à chaque image par le moteur.
  */
-void Hud::update(float fps) {
-    // On convertit le float en int pour éviter les virgules (Sinon sa spam d'erreurs)
+void Hud::update(float fps, int grass, int sheep, int wolves) {
+    // On met à jour le texte des FPS
+    // "static_cast<int>" transforme le nombre à virgule en entier (ex: 59.9 -> 59)
     m_textFps.setString("FPS: " + std::to_string(static_cast<int>(fps)));
+
+    // On construit le texte des statistiques ligne par ligne
+    std::string info = "";
+    info += "Herbe:   " + std::to_string(grass) + "\n";
+    info += "Moutons: " + std::to_string(sheep) + "\n";
+    info += "Loups:   " + std::to_string(wolves);
+
+    // On applique ce texte à l'objet graphique
+    m_textInfo.setString(info);
 }
 
 /**
- * @brief Affichage des éléments.
+ * @brief Dessine tous les éléments sur l'écran.
+ * @param window La fenêtre où dessiner.
  */
 void Hud::draw(sf::RenderWindow& window) {
-    // On dessine les textes sur la fenêtre donnée en paramètre
-    window.draw(m_textFps);
-    window.draw(m_textInfo);
+    // L'ordre est important : ce qu'on dessine en premier est au fond.
+    
+    window.draw(m_background); // Le fond gris
+    window.draw(m_separator);  // La barre blanche
+    window.draw(m_textTitle);  // Le titre
+    window.draw(m_textFps);    // Les FPS
+    window.draw(m_textInfo);   // Les stats
 }
 
 /**
- * @brief Mise à jour des dimensions du HUD.
+ * @brief Appelé quand l'utilisateur change la taille de la fenêtre.
+ * Permet d'étirer le fond du menu jusqu'en bas.
  */
 void Hud::onResize(sf::Vector2u newSize) {
-    // On garde la largeur fixe (m_width), mais on met à jour la hauteur
-    // correspond à la nouvelle hauteur de la fenêtre.
+    // On garde la largeur (m_width), mais on change la hauteur.
     m_background.setSize(sf::Vector2f(m_width, static_cast<float>(newSize.y)));
 }

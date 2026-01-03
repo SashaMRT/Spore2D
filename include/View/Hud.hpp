@@ -42,10 +42,9 @@ public:
     bool init(sf::Vector2u windowSize);
 
     /**
-     * @brief Met à jour les données affichées.
-     * @param fps Le nombre d'images par seconde (calculé dans Application).
-     */    
-    void update(float fps);
+     * @brief Met à jour les données affichées (FPS + Entités).
+     */   
+    void update(float fps, int grass, int sheep, int wolves);
 
     /**
      * @brief Dessine l'interface sur la fenêtre.
@@ -74,10 +73,14 @@ private:
     sf::Font m_font;
     // Le texte affichant les FPS.
     sf::Text m_textFps;
-    // Le texte affichant les infos.
+    // Le titre.
+    sf::Text m_textTitle;
+    // Les stats.
     sf::Text m_textInfo;
     // Le rendu du menu.
     sf::RectangleShape m_background;
+    // La barre de soulignement.
+    sf::RectangleShape m_separator;
     // La largeur définie du menu.
     float m_width;
 };

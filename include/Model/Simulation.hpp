@@ -33,4 +33,14 @@ void ecosystemUpdate(float dt);
 // Positionne automatiquement les formes SFML aux bonnes coordonnées.
 void ecosystemDraw(sf::RenderWindow& window);
 
-#endif
+// Structure pour transporter les stats facilement
+struct EcosystemStats {
+    int grass;
+    int sheep;
+    int wolves;
+};
+
+// Fonction pour récupérer les statistiques actuelles
+EcosystemStats getEcosystemStats();
+
+#endif // SIMULATION_HPP
