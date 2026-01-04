@@ -9,6 +9,8 @@
  * @copyright Copyright (c) 2026
  */
 
+// Empêche d'inclure ce fichier deux fois.
+#pragma once
 
 #ifndef WOLF_HPP
 #define WOLF_HPP
@@ -31,6 +33,7 @@ struct Wolf : public Entity {
     void update(float dt);               // Gestion énergie + apparence
     void hunt(std::vector<Sheep>& sheeps); // Recherche et poursuite
     void eat(std::vector<Sheep>& sheeps);  // Nourrissage
+    
 };
 
 #endif

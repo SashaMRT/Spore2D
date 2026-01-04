@@ -5,125 +5,192 @@
  * @details 
  *  - Orchestre la simulation complète du monde vivant
  *  - Gère les populations globales (conteneurs statiques)
- *  - Implémente l'IA des moutons : recherche d'herbe + fuite des loups
- *  - Contrôle les interactions prédateurs/proies et le respawn automatique
+ *  - Implémente l'IA : recherche herbe, fuite loups, évitement même espèce
+ *  - LIMITES CARRÉ RENDERER : pile dans la zone de jeu noire
  * @version 0.1
- * @date 2026-01-03
+ * @date 2026-01-04
  * 
  * @copyright Copyright (c) 2026
- *
  */
 
+// ===== INCLUSIONS =====
+// Dépendances principales de la simulation écosystème
+#include "../../include/Model/Simulation.hpp"  // Interface publique (init/update/draw)
+#include "../../include/Model/Entity.hpp"      // Classe de base (pos, energy, shape)
+#include "../../include/Model/Grass.hpp"       // Touffes d'herbe régénératives
+#include "../../include/Model/Sheep.hpp"       // Proies : pâturage + fuite loups
+#include "../../include/Model/Wolf.hpp"        // Prédateurs : chasse + prédation
+#include <algorithm>     // std::remove_if (nettoyage entités mortes)
+#include <cstdlib>       // rand() (spawn aléatoire)
+#include <ctime>         // time(NULL) (seed aléatoire)
+#include <cmath>         // sqrt() (distances, normalisation vecteurs)
 
-// Inclut toutes les entités de l'écosystème et les utilitaires nécessaires
-#include "../../include/Model/Simulation.hpp"
-#include "../../include/Model/Entity.hpp"
-#include "../../include/Model/Grass.hpp"
-#include "../../include/Model/Sheep.hpp"
-#include "../../include/Model/Wolf.hpp"
-#include <algorithm>     // Pour std::remove_if, emplace_back
-#include <cstdlib>       // Pour rand()
-#include <ctime>         // Pour time(NULL)
 
-// ===== CONTENEURS GLOBAUX DE L'ÉCOSYSTÈME =====
-// Listes statiques contenant TOUTES les entités vivantes de la simulation.
-// Accessibles uniquement depuis ce fichier (encapsulation).
+// ===== CONTENEURS GLOBAUX =====
 static std::vector<Grass> ecosystem_grass;
 static std::vector<Sheep> ecosystem_sheeps;
 static std::vector<Wolf> ecosystem_wolves;
 
-// ===== INITIALISATION =====
+// ===== LIMITES CARRÉ RENDERER (EXACTES) =====
+static void keepInMapBounds(sf::Vector2f& pos) {
+    // DIMENSIONS CALCULÉES depuis Renderer::init()
+    // hudWidth+10+5 = gauche | window.x-10 = droite | 10+5 = haut | window.y-10 = bas
+    const float MAP_LEFT = 265.f;     
+        // ↑ DIMINUER (260, 255) = entités PLUS À GAUCHE (touche bord)
+        // ↓ AUGMENTER (270, 275) = entités PLUS À DROITE (écart bord)
+    
+    const float MAP_RIGHT = 1255.f;   
+        // ↑ DIMINUER (1250, 1245) = entités PLUS À GAUCHE (touche bord droit)
+        // ↓ AUGMENTER (1260, 1265) = entités PLUS À DROITE (écart bord droit)
+    
+    const float MAP_TOP = 15.f;       
+        // ↑ DIMINUER (10, 5) = entités PLUS HAUT
+        // ↓ AUGMENTER (20, 25) = entités PLUS BAS
+    
+    const float MAP_BOTTOM = 700.f;   
+        // ↑ DIMINUER (695, 690) = entités PLUS HAUT (touche bord bas)
+        // ↓ AUGMENTER (705, 710) = entités PLUS BAS (écart bord bas)
+    
+    // BLOCAGE STRICT dans le carré noir
+    if (pos.x < MAP_LEFT) pos.x = MAP_LEFT;
+    if (pos.x > MAP_RIGHT) pos.x = MAP_RIGHT;
+    if (pos.y < MAP_TOP) pos.y = MAP_TOP;
+    if (pos.y > MAP_BOTTOM) pos.y = MAP_BOTTOM;
+}
+
+// ===== INITIALISATION (dans le carré) =====
 void initEcosystem() {
-    // Vide complètement les populations existantes
     ecosystem_grass.clear();
     ecosystem_sheeps.clear();
     ecosystem_wolves.clear();
 
-    // Spawn 8 touffes d'herbe dans la zone 400-1000x, 100-600y
+    // 8 herbes DANS le carré
     for (int i = 0; i < 8; i++) {
-        float x = 400 + (rand() % 600);  // X: 400 → 1000
-        float y = 100 + (rand() % 500);  // Y: 100 → 600
+        float x = 350 + (rand() % 900);  // 350-1250 → clampé 315-1270
+        float y = 50 + (rand() % 630);   // 50-680 → clampé 15-695
         ecosystem_grass.emplace_back(Grass({x, y}));
     }
 
-    // Spawn 5 moutons dans la zone 450-950x, 150-550y
+    // 5 moutons DANS le carré
     for (int i = 0; i < 5; i++) {
-        float x = 450 + (rand() % 500);
-        float y = 150 + (rand() % 400);
+        float x = 400 + (rand() % 800);
+        float y = 100 + (rand() % 550);
         ecosystem_sheeps.emplace_back(Sheep({x, y}));
     }
 
-    // Spawn 3 loups dans la zone 700-1000x, 200-500y
+    // 3 loups DANS le carré
     for (int i = 0; i < 3; i++) {
-        float x = 700 + (rand() % 300);
-        float y = 200 + (rand() % 300);
+        float x = 600 + (rand() % 600);
+        float y = 150 + (rand() % 450);
         ecosystem_wolves.emplace_back(Wolf({x, y}));
     }
 }
 
 // ===== MISE À JOUR PRINCIPALE =====
 void ecosystemUpdate(float dt) {
-    // Initialisation du générateur aléatoire (une seule fois)
     static bool randInit = false;
     if (!randInit) {
         srand(static_cast<unsigned>(time(NULL)));
-        initEcosystem();  // Premier spawn
+        initEcosystem();
         randInit = true;
     }
 
-    // Mise à jour herbe (régénération)
+    // HERBE
     for (auto& g : ecosystem_grass) g.update(dt);
 
-    // Mise à jour loups (mouvement + chasse)
-    for (auto& w : ecosystem_wolves) { 
-        w.update(dt); 
-        w.hunt(ecosystem_sheeps);    // IA de poursuite
-        w.eat(ecosystem_sheeps);     // Prédation
+    // LOUPS
+    for (auto& w : ecosystem_wolves) {
+        if (!w.alive) continue;
+        
+        w.update(dt);
+        sf::Vector2f moveDir{0.f, 0.f};
+        
+        w.hunt(ecosystem_sheeps);
+        
+        // Évitement loups (45px)
+        sf::Vector2f avoidDir{0.f, 0.f};
+        for (const auto& other : ecosystem_wolves) {
+            if (&other == &w || !other.alive) continue;
+            float d = w.dist(other.pos);
+            if (d < 45.f && d > 0.01f) {
+                sf::Vector2f away = w.pos - other.pos;
+                float strength = (45.f - d) / 45.f;
+                avoidDir += (away / d) * strength * 2.f;
+            }
+        }
+        
+        moveDir += avoidDir;
+        float len = std::sqrt(moveDir.x*moveDir.x + moveDir.y*moveDir.y);
+        if (len > 0.01f) {
+            moveDir /= len;
+            w.pos += moveDir * w.speed * dt;
+        }
+        
+        w.eat(ecosystem_sheeps);
+        keepInMapBounds(w.pos);  // DANS LE CARRÉ
     }
 
-    // IA MOUTONS (le cœur de la simulation !)
+    // MOUTONS
     for (auto& s : ecosystem_sheeps) {
-        if (!s.alive) continue;  // Mouton mort : ignoré
+        if (!s.alive) continue;
         
-        s.update(dt);  // Gestion énergie interne
-        sf::Vector2f moveDir{0.f, 0.f};  // Direction de déplacement
+        s.update(dt);
+        sf::Vector2f moveDir{0.f, 0.f};
 
-        // Recherche de l'herbe la plus proche (max 200px)
+        // Herbe proche
         Grass* bestGrass = nullptr;
         float bestDist = 999.f;
-        for (auto& g : ecosystem_grass)
+        for (auto& g : ecosystem_grass) {
             if (g.alive) {
                 float d = s.dist(g.pos);
-                if (d < bestDist && d < 200.f) { 
-                    bestDist = d; 
-                    bestGrass = &g; 
+                if (d < bestDist && d < 200.f) {
+                    bestDist = d;
+                    bestGrass = &g;
                 }
             }
-
-        // Attraction vers l'herbe proche (< 550px)
-        if (bestGrass && bestDist < 550.f) {
-            sf::Vector2f dir = bestGrass->pos - s.pos;
-            float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
-            moveDir = dir / len;  // Direction normalisée
         }
 
-        // Fuite panique si loup à < 100px
-        for (const auto& w : ecosystem_wolves)
+        if (bestGrass && bestDist < 550.f) {
+            sf::Vector2f dir = bestGrass->pos - s.pos;
+            float len = std::sqrt(dir.x*dir.x + dir.y*dir.y);
+            moveDir = dir / len;
+        }
+
+        // Fuite loups
+        for (const auto& w : ecosystem_wolves) {
             if (w.alive && s.dist(w.pos) < 100.f) {
                 sf::Vector2f flee = s.pos - w.pos;
-                float len = std::sqrt(flee.x * flee.x + flee.y * flee.y);
-                moveDir = (flee / len) * 1.5f;  // Fuite prioritaire x1.5
+                float len = std::sqrt(flee.x*flee.x + flee.y*flee.y);
+                moveDir = (flee / len) * 1.5f;
                 break;
             }
+        }
 
-        // Déplacement + confinement dans la zone de jeu
-        s.pos += moveDir * s.speed * dt;
-        s.pos.x = std::clamp(s.pos.x, 400.f, 1200.f);  // Limite horizontale
-        s.pos.y = std::clamp(s.pos.y, 100.f, 800.f);   // Limite verticale
-        s.eat(ecosystem_grass);  // Manger l'herbe proche
+        // Évitement moutons
+        sf::Vector2f avoidSheep{0.f, 0.f};
+        for (const auto& other : ecosystem_sheeps) {
+            if (&other == &s || !other.alive) continue;
+            float d = s.dist(other.pos);
+            if (d < 35.f && d > 0.01f) {
+                sf::Vector2f away = s.pos - other.pos;
+                float strength = (35.f - d) / 35.f;
+                avoidSheep += (away / d) * strength * 1.5f;
+            }
+        }
+        
+        moveDir += avoidSheep;
+        
+        float len = std::sqrt(moveDir.x*moveDir.x + moveDir.y*moveDir.y);
+        if (len > 0.01f) {
+            moveDir /= len;
+            s.pos += moveDir * s.speed * dt;
+        }
+        
+        keepInMapBounds(s.pos);  // DANS LE CARRÉ
+        s.eat(ecosystem_grass);
     }
 
-    // NETTOYAGE : supprime les entités mortes
+    // NETTOYAGE
     ecosystem_grass.erase(std::remove_if(ecosystem_grass.begin(), ecosystem_grass.end(), 
         [](auto& g){return !g.alive;}), ecosystem_grass.end());
     ecosystem_sheeps.erase(std::remove_if(ecosystem_sheeps.begin(), ecosystem_sheeps.end(), 
@@ -131,34 +198,33 @@ void ecosystemUpdate(float dt) {
     ecosystem_wolves.erase(std::remove_if(ecosystem_wolves.begin(), ecosystem_wolves.end(), 
         [](auto& w){return !w.alive;}), ecosystem_wolves.end());
 
-    // RESPAWN automatique si extinction des moutons
+    // RESPAWN
     if (ecosystem_sheeps.empty()) initEcosystem();
 }
 
-// ===== RENDU GRAPHIQUE =====
+// ===== RENDU =====
 void ecosystemDraw(sf::RenderWindow& window) {
-    // Dessine TOUTES les herbes (vivantes ou mortes = transparentes)
-    for (auto& g : ecosystem_grass) { 
-        g.shape.setPosition(g.pos); 
-        window.draw(g.shape); 
+    for (auto& g : ecosystem_grass) {
+        g.shape.setPosition(g.pos);
+        window.draw(g.shape);
     }
     
-    // Dessine SEULEMENT les moutons vivants
-    for (auto& s : ecosystem_sheeps) 
-        if (s.alive) { 
-            s.shape.setPosition(s.pos); 
-            window.draw(s.shape); 
+    for (auto& s : ecosystem_sheeps) {
+        if (s.alive) {
+            s.shape.setPosition(s.pos);
+            window.draw(s.shape);
         }
+    }
     
-    // Dessine SEULEMENT les loups vivants
-    for (auto& w : ecosystem_wolves) 
-        if (w.alive) { 
-            w.shape.setPosition(w.pos); 
-            window.draw(w.shape); 
+    for (auto& w : ecosystem_wolves) {
+        if (w.alive) {
+            w.shape.setPosition(w.pos);
+            window.draw(w.shape);
         }
+    }
 }
 
-// Retourne la taille actuelle des vecteurs
+// ===== STATS =====
 EcosystemStats getEcosystemStats() {
     return {
         static_cast<int>(ecosystem_grass.size()),

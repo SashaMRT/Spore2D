@@ -43,3 +43,4 @@ void Sheep::eat(std::vector<Grass>& grass) {
         }
     }
 }
+

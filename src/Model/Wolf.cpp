@@ -59,3 +59,4 @@ void Wolf::eat(std::vector<Sheep>& sheeps) {
         }
     }
 }
+

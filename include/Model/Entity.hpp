@@ -1,3 +1,18 @@
+/**
+ * @file Entity.hpp
+ * @author Gael Guinaliu (rodez.gael@gmail.com)
+ * @brief Classe de base commune : position, énergie, affichage pour toutes les entités
+ * @details Fournit les propriétés essentielles (pos, energy, shape), méthode dist() 
+ * et IA de déplacement pour herbe/moutons/loups
+ * @version 0.1
+ * @date 2026-01-04
+ * 
+ * @copyright Copyright (c) 2026
+ */
+
+// Empêche d'inclure ce fichier deux fois.
+#pragma once
+
 #ifndef ENTITY_HPP
 #define ENTITY_HPP
 

@@ -9,6 +9,8 @@
  * @copyright Copyright (c) 2026
  */
 
+// Empêche d'inclure ce fichier deux fois.
+#pragma once
 
 #ifndef SIMULATION_HPP
 #define SIMULATION_HPP
