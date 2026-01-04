@@ -1,39 +1,69 @@
 /**
  * @file Wolf.hpp
  * @author Gael Guinaliu (rodez.gael@gmail.com)
- * @brief Déclaration du loup : prédateur rapide et agressif
- * @details Héritage d'Entity, vitesse élevée, IA de chasse avancée
- * @version 0.1
- * @date 2026-01-03
- * 
+ * @brief Définition de la classe Wolf (Loup).
+ * @details Prédateur qui chasse les moutons pour gagner de l'énergie.
+ * @version 0.2
+ * @date 2026-01-04
+ *
  * @copyright Copyright (c) 2026
+ *
  */
 
-// Empêche d'inclure ce fichier deux fois.
+// Comme ifndef mais plus moderne
 #pragma once
 
-#ifndef WOLF_HPP
-#define WOLF_HPP
-
-#include "Entity.hpp"
+// Bibliothèque utilisées
+#include <SFML/Graphics.hpp>
 #include <vector>
+#include "Sheep.hpp" 
 
-// Déclaration anticipée (pour éviter inclusion circulaire)
-struct Sheep;
+class Wolf {
+public:
+    // -------------------------------------------------------------------------
+    // CONSTRUCTEUR
+    // -------------------------------------------------------------------------
+    Wolf(sf::Vector2f position);
 
-// Structure représentant un loup (hérite d’Entity)
-struct Wolf : public Entity {
-    float speed = 90;    // Vitesse de déplacement
-    float hunger = 15;   // Taux de perte d’énergie
-    float view = 200;    // Rayon de vision (détection des moutons)
+    // -------------------------------------------------------------------------
+    // MÉTHODES DE MISE À JOUR & DESSIN
+    // -------------------------------------------------------------------------
+    void update(float dt);
+    void draw(sf::RenderWindow& window);
     
-    // Constructeur : position de départ + paramètres de base
-    Wolf(sf::Vector2f p) : Entity(p, 120, sf::Color(139, 69, 19), 15.f) {}
-    
-    void update(float dt);               // Gestion énergie + apparence
-    void hunt(std::vector<Sheep>& sheeps); // Recherche et poursuite
-    void eat(std::vector<Sheep>& sheeps);  // Nourrissage
-    
+    // -------------------------------------------------------------------------
+    // CHASSE & ALIMENTATION
+    // -------------------------------------------------------------------------
+    /**
+     * @brief Trouve et se déplace vers le mouton le plus proche.
+     */
+    void hunt(const std::vector<Sheep>& sheeps);
+
+    /**
+     * @brief Mange les moutons à proximité.
+     */
+    void eat(std::vector<Sheep>& sheeps);
+
+    float dist(sf::Vector2f otherPos) const;
+
+    // -------------------------------------------------------------------------
+    // REPRODUCTION
+    // -------------------------------------------------------------------------
+    bool canReproduce() const;
+    void resetReproduction();
+
+    // -------------------------------------------------------------------------
+    // ATTRIBUTS PUBLICS
+    // -------------------------------------------------------------------------
+    sf::Vector2f pos;
+    sf::CircleShape shape;
+    bool alive;
+    float speed;
+
+private:
+    // -------------------------------------------------------------------------
+    // ATTRIBUTS PRIVÉS
+    // -------------------------------------------------------------------------
+    float m_energy;
+    float m_reproCooldown;
 };
-
-#endif

@@ -1,37 +1,52 @@
 /**
  * @file Grass.hpp
  * @author Gael Guinaliu (rodez.gael@gmail.com)
- * @brief Déclaration de l'entité Herbe : source d'énergie régénérative
- * @details Héritage d'Entity, ajoute la régénération automatique d'énergie
- * @version 0.1
- * @date 2026-01-03
- * 
+ * @brief Définition de la classe Grass (L'herbe).
+ * @details Ressource statique mangée par les moutons.
+ * @version 0.2
+ * @date 2026-01-04
+ *
  * @copyright Copyright (c) 2026
+ *
  */
 
-// Empêche d'inclure ce fichier deux fois.
+// Comme ifndef mais plus moderne
 #pragma once
 
-#ifndef GRASS_HPP
-#define GRASS_HPP
+// Bibliothèque utilisées
+#include <SFML/Graphics.hpp>
 
-// Inclut la classe de base Entity, dont Grass hérite.
-// On y récupère les champs : pos, energy, maxEnergy, alive, shape, etc.
-#include "Entity.hpp"
+class Grass {
+public:
+    // -------------------------------------------------------------------------
+    // CONSTRUCTEUR
+    // -------------------------------------------------------------------------
+    
+    /**
+     * @brief Crée une touffe d'herbe.
+     * @param position Où l'herbe pousse (X, Y).
+     */
+    Grass(sf::Vector2f position);
 
-// Représente une touffe d’herbe dans l’écosystème.
-// Utilise l'héritage de Entity pour profiter de la position, de l'énergie et de l'affichage.
-struct Grass : public Entity {
-    // Vitesse à laquelle l’herbe régénère son énergie au cours du temps.
-    float regen = 30.f;
+    // -------------------------------------------------------------------------
+    // MÉTHODES
+    // -------------------------------------------------------------------------
 
-    // Constructeur : initialise une herbe à la position p,
-    // avec les paramètres par défaut définis dans Grass.cpp (énergie max, couleur, rayon...).
-    Grass(sf::Vector2f p);
-
-    // Met à jour l’état de l’herbe.
-    // Typiquement : régénération de l’énergie et mise à jour de la couleur/transparence.
+    /**
+     * @brief Mise à jour (vide pour l'instant, l'herbe est statique).
+     */
     void update(float dt);
-};
 
-#endif
+    /**
+     * @brief Dessine l'herbe sur la fenêtre.
+     * C'est la fonction qui manquait !
+     */
+    void draw(sf::RenderWindow& window);
+
+    // -------------------------------------------------------------------------
+    // ATTRIBUTS PUBLICS
+    // -------------------------------------------------------------------------
+    sf::Vector2f pos;       // Position
+    sf::CircleShape shape;  // Forme de base
+    bool alive;             // Est-elle mangée ou non ?
+};

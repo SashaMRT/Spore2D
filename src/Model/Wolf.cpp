@@ -1,62 +1,120 @@
 /**
  * @file Wolf.cpp
  * @author Gael Guinaliu (rodez.gael@gmail.com)
- * @brief Implémentation du loup : prédateur chassant les moutons
- * @details 
- *  - IA de chasse et poursuite des moutons
- *  - Consommation des proies pour restaurer l'énergie
- *  - Gestion de la faim et de la mort
- * @version 0.1
- * @date 2026-01-03
- * 
+ * @brief Implémentation de la classe Wolf.
+ * @details Gestion de l'IA de chasse et du cycle de vie du loup.
+ * @version 0.2
+ * @date 2026-01-04
+ *
  * @copyright Copyright (c) 2026
+ *
  */
 
-
+// Bibliothèque utilisées
 #include "../../include/Model/Wolf.hpp"
-#include "../../include/Model/Sheep.hpp"
-#include <cmath>
+#include <cmath> // Pour les calculs
 
-// Mise à jour du loup (énergie, vie, apparence)
+// -------------------------------------------------------------------------
+// CONSTRUCTEUR
+// -------------------------------------------------------------------------
+
+Wolf::Wolf(sf::Vector2f position) : pos(position), alive(true) {
+    shape.setRadius(8.f);
+    shape.setOrigin(sf::Vector2f(8.f, 8.f)); 
+    speed = 95.f; // Rapide
+
+    m_energy = 50.f;       
+    m_reproCooldown = 5.0f;
+}
+
+// -------------------------------------------------------------------------
+// MISE À JOUR (UPDATE)
+// -------------------------------------------------------------------------
+
 void Wolf::update(float dt) {
     if (!alive) return;
 
-    energy -= hunger * dt;            // Consomme de l’énergie
-    if (energy <= 0) alive = false;   // Meurt s’il n’en a plus
+    // Le loup perd de l'énergie plus vite (3.0f)
+    m_energy -= 3.0f * dt; 
+    
+    if (m_energy <= 0) alive = false;
 
-    // Transparence selon l’énergie restante
-    unsigned char alpha = static_cast<unsigned char>(energy / maxEnergy * 255);
-    shape.setFillColor(sf::Color(139, 69, 19, alpha));
+    if (m_reproCooldown > 0) m_reproCooldown -= dt;
 }
 
-// Recherche du mouton le plus proche dans la portée "view"
-void Wolf::hunt(std::vector<Sheep>& sheeps) {
-    Sheep* target = nullptr;
-    float minDist = view;
+// -------------------------------------------------------------------------
+// CHASSE (IA)
+// -------------------------------------------------------------------------
 
-    for (auto& s : sheeps) {
+void Wolf::hunt(const std::vector<Sheep>& sheeps) {
+    if (!alive) return;
+    
+    const Sheep* target = nullptr;
+    float minDist = 300.f; // Rayon de vision
+
+    // On cherche la proie la plus proche
+    for (const auto& s : sheeps) {
         if (s.alive) {
             float d = dist(s.pos);
-            if (d < minDist) { minDist = d; target = &s; }
+            if (d < minDist) {
+                minDist = d;
+                target = &s;
+            }
         }
     }
 
-    // Avance vers la cible si trouvée
+    // Déplacement vers la cible
     if (target) {
         sf::Vector2f dir = target->pos - pos;
-        float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
-        if (len > 0) pos += (dir / len) * speed * 0.016f;
+        float len = std::sqrt(dir.x*dir.x + dir.y*dir.y);
+        // Normalisation et mouvement
+        pos += (dir / len) * speed * 0.016f; 
     }
 }
 
-// Mange un mouton proche et regagne de l’énergie
 void Wolf::eat(std::vector<Sheep>& sheeps) {
+    if (!alive) return;
+
     for (auto& s : sheeps) {
-        if (s.alive && dist(s.pos) < 30) {
-            energy = std::min(maxEnergy, energy + 90);
-            s.alive = false;
-            break;
+        // Si contact (< 20px)
+        if (s.alive && dist(s.pos) < 20.f) {
+            s.alive = false;  // Mouton mangé
+            m_energy += 40.f; // Gros gain d'énergie
+            if (m_energy > 100.f) m_energy = 100.f;
         }
     }
 }
 
+float Wolf::dist(sf::Vector2f otherPos) const {
+    float dx = pos.x - otherPos.x;
+    float dy = pos.y - otherPos.y;
+    return std::sqrt(dx*dx + dy*dy);
+}
+
+// -------------------------------------------------------------------------
+// REPRODUCTION
+// -------------------------------------------------------------------------
+
+bool Wolf::canReproduce() const {
+    // Seuil d'énergie plus élevé pour le loup (70)
+    return alive && m_energy > 70.f && m_reproCooldown <= 0.f;
+}
+
+void Wolf::resetReproduction() {
+    m_energy -= 40.f;       
+    m_reproCooldown = 10.f; // Cycle plus lent
+}
+
+// -------------------------------------------------------------------------
+// AFFICHAGE
+// -------------------------------------------------------------------------
+
+void Wolf::draw(sf::RenderWindow& window) {
+    shape.setPosition(pos);
+    shape.setFillColor(sf::Color(100, 100, 100)); // Gris
+    
+    // Contour rouge
+    shape.setOutlineThickness(1);
+    shape.setOutlineColor(sf::Color::Red); 
+    window.draw(shape);
+}

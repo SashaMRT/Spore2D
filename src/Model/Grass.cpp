@@ -1,41 +1,66 @@
 /**
  * @file Grass.cpp
  * @author Gael Guinaliu (rodez.gael@gmail.com)
- * @brief Implémentation de l'herbe : régénération d'énergie et affichage dynamique
- * @details 
- *  - Touffe d'herbe comestible par les moutons
- *  - Régénère automatiquement son énergie
- *  - Transparence visuelle proportionnelle à l'énergie disponible
- * @version 0.1
- * @date 2026-01-03
- * 
+ * @brief Implémentation de la classe Grass.
+ * @version 0.2
+ * @date 2026-01-04
+ *
  * @copyright Copyright (c) 2026
+ *
  */
 
-
+// Bibliothèque utilisées
 #include "../../include/Model/Grass.hpp"
-#include <algorithm>  // Pour std::min
 
-// Constructeur de Grass : initialise  l'herbe à la position donnée.
-// Appelle le constructeur Entity avec :
-// - Position p
-// - Énergie max = 100
-// - Couleur verte
-// - Rayon = 8 pixels (petite taille)
-Grass::Grass(sf::Vector2f p) : Entity(p, 100, sf::Color::Green, 8.f) {}
+// -------------------------------------------------------------------------
+// CONSTRUCTEUR
+// -------------------------------------------------------------------------
 
-// Met à jour l'état de l'herbe à chaque frame.
-// - Régénère l'énergie progressivement (limite à maxEnergy)
-// - Ajuste la transparence selon le niveau d'énergie (pleine = opaque, vide = transparent)
+Grass::Grass(sf::Vector2f position) : pos(position), alive(true) {
+    // On configure la forme principale
+    shape.setRadius(4.f);
+    
+    // SFML 3 oblige l'utilisation de vecteur à l'origine
+    shape.setOrigin(sf::Vector2f(4.f, 4.f));
+    
+    shape.setFillColor(sf::Color(50, 200, 50)); // Vert
+    shape.setPosition(pos);
+}
+
+// -------------------------------------------------------------------------
+// MISE À JOUR
+// -------------------------------------------------------------------------
+
 void Grass::update(float dt) {
-    if (!alive) return;  // Entité morte : rien à faire
-    
-    // Régénération d'énergie : energy += regen * temps écoulé
-    energy = std::min(maxEnergy, energy + regen * dt);
-    
-    // Calcul de la transparence : 0% énergie = transparent, 100% = opaque
-    unsigned char alpha = static_cast<unsigned char>(energy / maxEnergy * 255);
-    
-    // Met à jour la couleur : vert vif + transparence variable
-    shape.setFillColor(sf::Color(0, 255, 0, alpha));
+    // L'herbe ne fait rien de spécial, elle attend d'être mangée.
+    // On garde la fonction pour respecter la structure du projet.
+}
+
+// -------------------------------------------------------------------------
+// AFFICHAGE
+// -------------------------------------------------------------------------
+
+void Grass::draw(sf::RenderWindow& window) {
+    if (!alive) return;
+
+    // On dessine la feuille centrale
+    shape.setPosition(pos);
+    shape.setFillColor(sf::Color(50, 200, 50)); 
+    window.draw(shape);
+
+    // On dessine une petite feuille à gauche (déco)
+    sf::CircleShape leafLeft = shape;
+    leafLeft.setRadius(3.f);
+    leafLeft.setOrigin(sf::Vector2f(3.f, 3.f));
+    leafLeft.setPosition(sf::Vector2f(pos.x - 4.f, pos.y + 2.f));
+    leafLeft.setFillColor(sf::Color(30, 180, 30)); // Un peu plus foncé
+    window.draw(leafLeft);
+
+    // On dessine une petite feuille à droite (déco)
+    sf::CircleShape leafRight = shape;
+    leafRight.setRadius(3.f);
+    leafRight.setOrigin(sf::Vector2f(3.f, 3.f));
+    leafRight.setPosition(sf::Vector2f(pos.x + 4.f, pos.y + 2.f));
+    leafRight.setFillColor(sf::Color(70, 220, 70)); // Un peu plus clair
+    window.draw(leafRight);
 }
