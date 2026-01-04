@@ -40,6 +40,12 @@ struct EcosystemStats {
     int grass;
     int sheep;
     int wolves;
+
+    // Ajoute ces deux lignes :
+    int deadSheep;   // Compteur total de moutons morts
+    int deadWolves;  // Compteur total de loups morts
+    int bornSheep;   // Compteur de naissances moutons
+    int bornWolves;  // Compteur de naissances loups
 };
 
 // Fonction pour récupérer les statistiques actuelles

@@ -126,25 +126,62 @@ bool Hud::init(sf::Vector2u windowSize) {
     return true; // Tout est bon
 }
 
+
 /**
- * @brief Met à jour les textes avec les nombres actuels du jeu.
- * Appelée à chaque image par le moteur.
+ * @brief Met à jour l'ensemble des textes du HUD (FPS et Statistiques).
+ * @details Cette méthode est appelée à chaque frame pour rafraîchir les nombres affichés à l'écran.
+ * Elle construit une longue chaîne de caractères contenant toutes les infos (Vivants, Morts, Naissances)
+ * et l'envoie à l'objet sf::Text.
+ * * @param fps Le nombre d'images par seconde actuel (float).
+ * @param grass Nombre d'entités "Herbe" vivantes.
+ * @param sheep Nombre d'entités "Mouton" vivantes.
+ * @param wolves Nombre d'entités "Loup" vivantes.
+ * @param deadS Nombre total de moutons morts depuis le début.
+ * @param deadW Nombre total de loups morts depuis le début.
+ * @param bornS Nombre total de naissances de moutons.
+ * @param bornW Nombre total de naissances de loups.
  */
-void Hud::update(float fps, int grass, int sheep, int wolves) {
-    // On met à jour le texte des FPS
-    // "static_cast<int>" transforme le nombre à virgule en entier (ex: 59.9 -> 59)
+void Hud::update(float fps, int grass, int sheep, int wolves, int deadS, int deadW, int bornS, int bornW) {
+    
+    // -----------------------------------------------------------
+    // 1. MISE À JOUR DES FPS (Frames Per Second)
+    // -----------------------------------------------------------
+    // On convertit le float (ex: 59.943) en int (ex: 59) pour la lisibilité.
+    // std::to_string transforme le nombre en texte affichable.
     m_textFps.setString("FPS: " + std::to_string(static_cast<int>(fps)));
 
-    // On construit le texte des statistiques ligne par ligne
+
+    // -----------------------------------------------------------
+    // 2. CONSTRUCTION DU BLOC DE TEXTE (STATISTIQUES)
+    // -----------------------------------------------------------
+    // On utilise une chaîne std::string vide qu'on remplit ligne par ligne.
     std::string info = "";
+    
+    // --- SECTION VIVANTS ---
+    // Affiche la population actuelle présente sur l'écran.
     info += "Herbe:   " + std::to_string(grass) + "\n";
     info += "Moutons: " + std::to_string(sheep) + "\n";
-    info += "Loups:   " + std::to_string(wolves);
+    info += "Loups:   " + std::to_string(wolves) + "\n\n"; // \n\n saute une ligne pour aérer
 
-    // On applique ce texte à l'objet graphique
+    // --- SECTION MORTS (CIMETIERE) ---
+    // Affiche le cumul des pertes depuis le lancement.
+    info += "--- MORTS ---\n";
+    info += "Moutons: " + std::to_string(deadS) + "\n";
+    info += "Loups:   " + std::to_string(deadW) + "\n\n";
+
+    // --- SECTION NAISSANCES ---
+    // Affiche le cumul des reproduction (bébés nés) depuis le lancement.
+    info += "--- NAISSANCES ---\n";
+    info += "Moutons: " + std::to_string(bornS) + "\n";
+    info += "Loups:   " + std::to_string(bornW);
+
+
+    // -----------------------------------------------------------
+    // 3. APPLICATION AU RENDU
+    // -----------------------------------------------------------
+    // On envoie la chaîne complète à l'objet graphique SFML pour qu'elle soit dessinée.
     m_textInfo.setString(info);
 }
-
 /**
  * @brief Dessine tous les éléments sur l'écran.
  * @param window La fenêtre où dessiner.

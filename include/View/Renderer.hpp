@@ -54,4 +54,6 @@ public:
 private:
     // Représente le terrain de jeu
     sf::RectangleShape m_gameArea;
+    sf::Font m_font;      // Pour charger la police (arial.ttf)
+    sf::Text m_statsText; // Pour afficher le texte des stats
 };

@@ -42,10 +42,19 @@ public:
     bool init(sf::Vector2u windowSize);
 
     /**
-     * @brief Met à jour les données affichées (FPS + Entités).
+     * @brief Met à jour les données affichées (FPS + Entités + Statistiques globales).
+     * @details Cette fonction reçoit toutes les données du jeu (Vivants, Morts, Naissances)
+     * pour mettre à jour les textes du menu à gauche.
+     * * @param fps Le nombre d'images par seconde (fluidité du jeu).
+     * @param grass Nombre d'herbes actuellement sur le terrain.
+     * @param sheep Nombre de moutons vivants.
+     * @param wolves Nombre de loups vivants.
+     * @param deadS Nombre total de moutons morts (Cimetière).
+     * @param deadW Nombre total de loups morts (Cimetière).
+     * @param bornS Nombre total de bébés moutons nés (Naissances).
+     * @param bornW Nombre total de bébés loups nés (Naissances).
      */   
-    void update(float fps, int grass, int sheep, int wolves);
-
+    void update(float fps, int grass, int sheep, int wolves, int deadS, int deadW, int bornS, int bornW);
     /**
      * @brief Dessine l'interface sur la fenêtre.
      * @param window Reprend la bibliothèque de rendu SFML.

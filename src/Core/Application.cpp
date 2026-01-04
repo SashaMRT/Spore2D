@@ -132,7 +132,7 @@ void Application::run() {
 
         // Mise à jour de la logique (Update).
         EcosystemStats stats = getEcosystemStats(); // On récupére les informations
-        m_hud.update(fps, stats.grass, stats.sheep, stats.wolves); // On les envoies au menu
+        m_hud.update(fps, stats.grass, stats.sheep, stats.wolves, stats.deadSheep, stats.deadWolves, stats.bornSheep, stats.bornWolves);
 
         // Affichage (Render).
         // On efface l'image précédente (Bug graphique sinon).
