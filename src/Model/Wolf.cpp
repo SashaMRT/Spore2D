@@ -1,58 +1,38 @@
 /**
  * @file Wolf.cpp
- * @author Gael Guinaliu (rodez.gael@gmail.com)
- * @brief Implémentation de la classe Wolf.
- * @details Gestion de l'IA de chasse et du cycle de vie du loup.
- * @version 0.2
- * @date 2026-01-04
- *
- * @copyright Copyright (c) 2026
- *
+ * @brief Implémentation du Loup
  */
 
-// Bibliothèque utilisées
 #include "../../include/Model/Wolf.hpp"
-#include <cmath> // Pour les calculs
+#include "../../include/Model/Sheep.hpp" // Nécessaire ici pour le code
+#include <cmath>
 
-// -------------------------------------------------------------------------
-// CONSTRUCTEUR
-// -------------------------------------------------------------------------
-
-Wolf::Wolf(sf::Vector2f position) : pos(position), alive(true) {
-    shape.setRadius(8.f);
-    shape.setOrigin(sf::Vector2f(8.f, 8.f)); 
-    speed = 95.f; // Rapide
-
-    m_energy = 50.f;       
+Wolf::Wolf(sf::Vector2f position) 
+    : Entity(position, 100.f, sf::Color(200, 50, 50), 9.f) // ROUGE pour être visible
+{
+    // On remet la forme simple demandée
+    shape.setOutlineThickness(2);
+    shape.setOutlineColor(sf::Color(100, 0, 0)); 
+    
+    speed = 95.f;
+    energy = 60.f; // Un peu plus d'énergie au départ
     m_reproCooldown = 5.0f;
 }
-
-// -------------------------------------------------------------------------
-// MISE À JOUR (UPDATE)
-// -------------------------------------------------------------------------
 
 void Wolf::update(float dt) {
     if (!alive) return;
 
-    // Le loup perd de l'énergie plus vite (3.0f)
-    m_energy -= 3.0f * dt; 
-    
-    if (m_energy <= 0) alive = false;
-
+    energy -= 3.0f * dt; 
+    if (energy <= 0) alive = false;
     if (m_reproCooldown > 0) m_reproCooldown -= dt;
 }
-
-// -------------------------------------------------------------------------
-// CHASSE (IA)
-// -------------------------------------------------------------------------
 
 void Wolf::hunt(const std::vector<Sheep>& sheeps) {
     if (!alive) return;
     
     const Sheep* target = nullptr;
-    float minDist = 300.f; // Rayon de vision
+    float minDist = 350.f; // Bonne vision
 
-    // On cherche la proie la plus proche
     for (const auto& s : sheeps) {
         if (s.alive) {
             float d = dist(s.pos);
@@ -63,12 +43,10 @@ void Wolf::hunt(const std::vector<Sheep>& sheeps) {
         }
     }
 
-    // Déplacement vers la cible
     if (target) {
         sf::Vector2f dir = target->pos - pos;
         float len = std::sqrt(dir.x*dir.x + dir.y*dir.y);
-        // Normalisation et mouvement
-        pos += (dir / len) * speed * 0.016f; 
+        if (len > 0) pos += (dir / len) * speed * 0.016f; 
     }
 }
 
@@ -76,45 +54,25 @@ void Wolf::eat(std::vector<Sheep>& sheeps) {
     if (!alive) return;
 
     for (auto& s : sheeps) {
-        // Si contact (< 20px)
-        if (s.alive && dist(s.pos) < 20.f) {
-            s.alive = false;  // Mouton mangé
-            m_energy += 40.f; // Gros gain d'énergie
-            if (m_energy > 100.f) m_energy = 100.f;
+        if (s.alive && dist(s.pos) < 20.f) { // Distance de contact
+            s.alive = false;  
+            energy += 50.f; 
+            if (energy > maxEnergy) energy = maxEnergy;
         }
     }
 }
 
-float Wolf::dist(sf::Vector2f otherPos) const {
-    float dx = pos.x - otherPos.x;
-    float dy = pos.y - otherPos.y;
-    return std::sqrt(dx*dx + dy*dy);
-}
-
-// -------------------------------------------------------------------------
-// REPRODUCTION
-// -------------------------------------------------------------------------
-
 bool Wolf::canReproduce() const {
-    // Seuil d'énergie plus élevé pour le loup (70)
-    return alive && m_energy > 70.f && m_reproCooldown <= 0.f;
+    return alive && energy > 80.f && m_reproCooldown <= 0.f;
 }
 
 void Wolf::resetReproduction() {
-    m_energy -= 40.f;       
-    m_reproCooldown = 10.f; // Cycle plus lent
+    energy -= 40.f;       
+    m_reproCooldown = 10.f; 
 }
 
-// -------------------------------------------------------------------------
-// AFFICHAGE
-// -------------------------------------------------------------------------
-
 void Wolf::draw(sf::RenderWindow& window) {
+    // DESSIN SIMPLE : Juste le cercle de base
     shape.setPosition(pos);
-    shape.setFillColor(sf::Color(100, 100, 100)); // Gris
-    
-    // Contour rouge
-    shape.setOutlineThickness(1);
-    shape.setOutlineColor(sf::Color::Red); 
     window.draw(shape);
 }

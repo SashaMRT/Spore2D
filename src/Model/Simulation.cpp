@@ -1,295 +1,297 @@
 /**
  * @file Simulation.cpp
- * @author Gael Guinaliu (rodez.gael@gmail.com)
- * @brief Gestionnaire global de la simulation (Moteur).
- * @details Gère les listes d'entités, les mises à jour, les collisions et les naissances.
- * @version 0.2
- * @date 2026-01-04
- *
- * @copyright Copyright (c) 2026
- *
+ * @brief Logique métier : Gestion intelligente des bordures (Tuer vs Bloquer)
  */
 
-// Bibliothèque utilisées
 #include "../../include/Model/Simulation.hpp"
 #include "../../include/Model/Entity.hpp"
 #include "../../include/Model/Grass.hpp"
 #include "../../include/Model/Sheep.hpp"
 #include "../../include/Model/Wolf.hpp"
-#include <algorithm> // Pour std::remove_if
-#include <cstdlib>   // Pour rand()
-#include <ctime>     // Pour time()
-#include <vector>    // obligatoire avec SFML 3
-#include <cmath>     // Pour les calculs
+#include <algorithm>
+#include <cstdlib>
+#include <ctime>
+#include <vector>
+#include <list> 
+#include <map>  
+#include <cmath>
 
 // -------------------------------------------------------------------------
-// POPULATIONS (VARIABLES GLOBALES)
+// VARIABLES GLOBALES
 // -------------------------------------------------------------------------
 
-static std::vector<Grass> ecosystem_grass;
+static float g_xMin = 0.f, g_xMax = 1000.f;
+static float g_yMin = 0.f, g_yMax = 1000.f;
+static float g_simulationTime = 0.f;
+
+// CONFIGURATION
+static std::map<std::string, float> g_config = {
+    {"grass_spawn_rate", 5.0f},
+    {"sheep_vision_food", 250.0f},
+    {"sheep_panic_dist", 120.0f},
+    {"wolf_vision", 400.0f}
+};
+
+static std::list<Grass> ecosystem_grass; 
 static std::vector<Sheep> ecosystem_sheeps;
 static std::vector<Wolf> ecosystem_wolves;
 
-// Elles gardent le compte tant que le programme tourne
+// STATS
 static int g_deadSheepCount = 0;
 static int g_deadWolvesCount = 0;
-
 static int g_bornSheepCount = 0;
 static int g_bornWolvesCount = 0;
 
 // -------------------------------------------------------------------------
-// INITIALISATION
+// FONCTIONS UTILITAIRES
 // -------------------------------------------------------------------------
 
+void setWorldBounds(float xMin, float xMax, float yMin, float yMax) {
+    g_xMin = xMin; g_xMax = xMax;
+    g_yMin = yMin; g_yMax = yMax;
+}
+
 /**
- * @brief Initialise l'écosystème avec des valeurs par défaut.
+ * @brief Gestion intelligente des limites du monde.
+ * @details 
+ * - Si l'entité dépasse un peu (elle marche vers le mur) -> On la bloque (Clamp).
+ * - Si l'entité dépasse BEAUCOUP (la fenêtre a été réduite sur elle) -> On la tue.
  */
+void checkWorldBounds(Entity& e) {
+    float padding = 12.0f;          // Marge pour ne pas toucher le trait
+    float killThreshold = 50.0f;    // Si on dépasse de 50px, c'est que la fenêtre a rétréci -> Mort.
+
+    // 1. Vérification Limite GAUCHE
+    if (e.pos.x < g_xMin + padding) {
+        if (e.pos.x < g_xMin - killThreshold) e.alive = false; // Trop loin -> Mort
+        else e.pos.x = g_xMin + padding;                       // Juste au bord -> Bloqué
+    }
+    // 2. Vérification Limite DROITE
+    else if (e.pos.x > g_xMax - padding) {
+        if (e.pos.x > g_xMax + killThreshold) e.alive = false;
+        else e.pos.x = g_xMax - padding;
+    }
+
+    // 3. Vérification Limite HAUT
+    if (e.pos.y < g_yMin + padding) {
+        if (e.pos.y < g_yMin - killThreshold) e.alive = false;
+        else e.pos.y = g_yMin + padding;
+    }
+    // 4. Vérification Limite BAS
+    else if (e.pos.y > g_yMax - padding) {
+        if (e.pos.y > g_yMax + killThreshold) e.alive = false;
+        else e.pos.y = g_yMax - padding;
+    }
+}
+
+// Physique de répulsion (Pas de changement ici)
+void solveCollisions() {
+    for (size_t i = 0; i < ecosystem_sheeps.size(); ++i) {
+        for (size_t j = i + 1; j < ecosystem_sheeps.size(); ++j) {
+            Sheep& s1 = ecosystem_sheeps[i];
+            Sheep& s2 = ecosystem_sheeps[j];
+            if (!s1.alive || !s2.alive) continue;
+            float d = s1.dist(s2.pos);
+            if (d < 14.f && d > 0.1f) {
+                sf::Vector2f push = (s1.pos - s2.pos) / d;
+                float overlap = 14.f - d;
+                s1.pos += push * (overlap * 0.5f);
+                s2.pos -= push * (overlap * 0.5f);
+            }
+        }
+    }
+    for (size_t i = 0; i < ecosystem_wolves.size(); ++i) {
+        for (size_t j = i + 1; j < ecosystem_wolves.size(); ++j) {
+            Wolf& w1 = ecosystem_wolves[i];
+            Wolf& w2 = ecosystem_wolves[j];
+            if (!w1.alive || !w2.alive) continue;
+            float d = w1.dist(w2.pos);
+            if (d < 18.f && d > 0.1f) {
+                sf::Vector2f push = (w1.pos - w2.pos) / d;
+                float overlap = 18.f - d;
+                w1.pos += push * (overlap * 0.5f);
+                w2.pos -= push * (overlap * 0.5f);
+            }
+        }
+    }
+}
+
+sf::Vector2f getWanderDir(int index, float time) {
+    float angle = std::sin(time * 0.5f + index) * 3.14159f * 2.0f;
+    return sf::Vector2f(std::cos(angle), std::sin(angle));
+}
+
+// -------------------------------------------------------------------------
+// LOGIQUE PRINCIPALE
+// -------------------------------------------------------------------------
+
 void initEcosystem() {
     ecosystem_grass.clear();
     ecosystem_sheeps.clear();
     ecosystem_wolves.clear();
+    g_simulationTime = 0.f;
+    g_deadSheepCount = 0; g_deadWolvesCount = 0;
+    g_bornSheepCount = 0; g_bornWolvesCount = 0;
 
-    // Génération Herbe
-    for (int i = 0; i < 20; i++) { 
-        float x = 400 + (rand() % 600);
-        float y = 100 + (rand() % 500);
+    for (int i = 0; i < 50; i++) { 
+        float x = g_xMin + 20 + (rand() % (int)(g_xMax - g_xMin - 40));
+        float y = g_yMin + 20 + (rand() % (int)(g_yMax - g_yMin - 40));
         ecosystem_grass.emplace_back(Grass({x, y}));
     }
-
-    // Génération Moutons
-    for (int i = 0; i < 10; i++) { 
-        float x = 450 + (rand() % 500);
-        float y = 150 + (rand() % 400);
+    for (int i = 0; i < 20; i++) { 
+        float x = g_xMin + 20 + (rand() % (int)(g_xMax - g_xMin - 40));
+        float y = g_yMin + 20 + (rand() % (int)(g_yMax - g_yMin - 40));
         ecosystem_sheeps.emplace_back(Sheep({x, y}));
     }
-
-    // Génération Loups
-    for (int i = 0; i < 2; i++) { 
-        float x = 700 + (rand() % 300);
-        float y = 200 + (rand() % 300);
+    for (int i = 0; i < 3; i++) { 
+        float x = g_xMin + 20 + (rand() % (int)(g_xMax - g_xMin - 40));
+        float y = g_yMin + 20 + (rand() % (int)(g_yMax - g_yMin - 40));
         ecosystem_wolves.emplace_back(Wolf({x, y}));
     }
 }
 
-// -------------------------------------------------------------------------
-// BOUCLE PRINCIPALE (UPDATE)
-// -------------------------------------------------------------------------
-
-/**
- * @brief Met à jour toute la logique de l'écosystème (Cerveau du jeu).
- * @details Cette fonction est appelée à chaque image. Elle gère :
- * 1. La repousse aléatoire de l'herbe.
- * 2. Le comportement des Loups (Chasse, Manger, Reproduction).
- * 3. Le comportement des Moutons (Manger, Fuite, Reproduction, IA de déplacement).
- * 4. La naissance des bébés et la suppression des morts (Nettoyage).
- * * @param dt Delta Time (Temps écoulé depuis la dernière image) pour fluidifier les mouvements.
- */
 void ecosystemUpdate(float dt) {
-    
-    // -----------------------------------------------------------
-    // 1. INITIALISATION DE L'ALÉATOIRE
-    // -----------------------------------------------------------
-    // "static" permet de garder la variable en mémoire entre les appels.
-    // On ne veut lancer srand() qu'une seule fois au tout début.
     static bool randInit = false;
-    if (!randInit) {
-        srand(static_cast<unsigned>(time(NULL)));
-        initEcosystem(); // Si c'est la première fois, on crée le monde
-        randInit = true;
+    if (!randInit) { srand(time(NULL)); initEcosystem(); randInit = true; }
+
+    g_simulationTime += dt;
+
+    // 1. HERBE
+    if ((rand() % 100) < g_config["grass_spawn_rate"]) { 
+        float x = g_xMin + 20 + (rand() % (int)(std::max(1.f, g_xMax - g_xMin - 40)));
+        float y = g_yMin + 20 + (rand() % (int)(std::max(1.f, g_yMax - g_yMin - 40)));
+        ecosystem_grass.push_back(Grass({x, y}));
     }
-
-
-    // -----------------------------------------------------------
-    // 2. GESTION DE L'HERBE (Repousse)
-    // -----------------------------------------------------------
-    // À chaque frame, il y a 5% de chance qu'une nouvelle herbe pousse.
-    if (rand() % 100 < 5) { 
-        // Position aléatoire contrainte (pour ne pas apparaître hors champ)
-        float x = 400 + (rand() % 600);
-        float y = 100 + (rand() % 500);
-        ecosystem_grass.emplace_back(Grass({x, y}));
-    }
-    // On met à jour l'animation ou l'état de l'herbe existante
-    for (auto& g : ecosystem_grass) g.update(dt);
-
-
-    // -----------------------------------------------------------
-    // 3. GESTION DES LOUPS (Prédateurs)
-    // -----------------------------------------------------------
-    std::vector<Wolf> babyWolves; // Liste temporaire pour stocker les bébés nés cette frame
-
-    for (size_t i = 0; i < ecosystem_wolves.size(); ++i) {
-        Wolf& w1 = ecosystem_wolves[i];
-        
-        // Si le loup est mort, on l'ignore (il sera supprimé à la fin)
-        if (!w1.alive) continue;
-
-        // Comportement de base
-        w1.update(dt);             // Diminue la faim / cooldown reproduction
-        w1.hunt(ecosystem_sheeps); // Cherche un mouton
-        w1.eat(ecosystem_sheeps);  // Mange si assez proche
-
-        // --- REPRODUCTION DES LOUPS ---
-        if (w1.canReproduce()) {
-            // On cherche un partenaire (double boucle)
-            for (size_t j = i + 1; j < ecosystem_wolves.size(); ++j) {
-                Wolf& w2 = ecosystem_wolves[j];
-                
-                // Conditions : Partenaire vivant + prêt + proche (< 30px)
-                if (w2.alive && w2.canReproduce() && w1.dist(w2.pos) < 30.f) {
-                    // Naissance !
-                    babyWolves.emplace_back(Wolf(w1.pos)); 
-                    
-                    // Reset des compteurs
-                    w1.resetReproduction();
-                    w2.resetReproduction();
-                    g_bornWolvesCount++; // Statistique pour le HUD
-                    break; // Un seul bébé à la fois
-                }
-            }
-        }
-    }
-
-
-    // -----------------------------------------------------------
-    // 4. GESTION DES MOUTONS (Proies)
-    // -----------------------------------------------------------
-    std::vector<Sheep> babySheeps; // Liste temporaire
-
-    for (size_t i = 0; i < ecosystem_sheeps.size(); ++i) {
-        Sheep& s1 = ecosystem_sheeps[i];
-        if (!s1.alive) continue;
-
-        s1.update(dt);          // Vieillissement / faim
-        s1.eat(ecosystem_grass);// Manger l'herbe
-
-        // --- INTELLIGENCE ARTIFICIELLE (IA) DE MOUVEMENT ---
-        sf::Vector2f moveDir{0.f, 0.f};
-        
-        // A. RECHERCHE DE NOURRITURE (Priorité 2)
-        Grass* bestGrass = nullptr;
-        float bestDist = 999.f;
-        
-        // On cherche l'herbe la plus proche dans un rayon de 200px
-        for (auto& g : ecosystem_grass) {
-            if (g.alive) {
-                float d = s1.dist(g.pos);
-                if (d < bestDist && d < 200.f) { bestDist = d; bestGrass = &g; }
-            }
-        }
-        // Si on a trouvé de l'herbe, on se dirige vers elle
-        if (bestGrass) {
-            sf::Vector2f dir = bestGrass->pos - s1.pos;
-            float len = std::sqrt(dir.x*dir.x + dir.y*dir.y); // Normalisation du vecteur
-            moveDir = dir / len;
-        }
-        
-        // B. FUITE DEVANT LE LOUP (Priorité 1 - Absolue)
-        for (const auto& w : ecosystem_wolves) {
-            // Si un loup est vivant et trop proche (< 100px)
-            if (w.alive && s1.dist(w.pos) < 100.f) {
-                sf::Vector2f flee = s1.pos - w.pos; // Vecteur opposé au loup
-                float len = std::sqrt(flee.x*flee.x + flee.y*flee.y);
-                moveDir = (flee / len) * 1.8f; // On fuit 1.8x plus vite que la marche normale
-                break; // On ne fuit que le premier loup trouvé (simplification)
-            }
-        }
-        
-        // C. APPLICATION DU MOUVEMENT
-        s1.pos += moveDir * s1.speed * dt;
-
-        // D. LIMITES DU MONDE (Clamp)
-        // Empêche le mouton de sortir de la zone définie
-        s1.pos.x = std::clamp(s1.pos.x, 400.f, 1200.f);
-        s1.pos.y = std::clamp(s1.pos.y, 100.f, 800.f);
-
-
-        // --- REPRODUCTION DES MOUTONS ---
-        if (s1.canReproduce()) {
-            for (size_t j = i + 1; j < ecosystem_sheeps.size(); ++j) {
-                Sheep& s2 = ecosystem_sheeps[j];
-                
-                if (s2.alive && s2.canReproduce() && s1.dist(s2.pos) < 30.f) {
-                    babySheeps.emplace_back(Sheep(s1.pos)); // Naissance
-                    s1.resetReproduction();
-                    s2.resetReproduction();
-                    g_bornSheepCount++; // Statistique
-                    break;
-                }
-            }
-        }
-    }
-
-    // -----------------------------------------------------------
-    // 5. NETTOYAGE ET NAISSANCES (Fin de cycle)
-    // -----------------------------------------------------------
     
-    // On ajoute les bébés nés durant cette image aux listes principales
+    for (auto& g : ecosystem_grass) {
+        g.update(dt);
+        // HERBE : Si elle est hors des limites (même un peu), elle meurt.
+        if (g.pos.x < g_xMin || g.pos.x > g_xMax || g.pos.y < g_yMin || g.pos.y > g_yMax) {
+            g.alive = false;
+        }
+    }
+
+    // 2. LOUPS
+    std::vector<Wolf> babyWolves;
+    for (size_t i = 0; i < ecosystem_wolves.size(); ++i) {
+        Wolf& w = ecosystem_wolves[i];
+        if (!w.alive) continue;
+
+        w.update(dt);
+        checkWorldBounds(w); // Utilise la nouvelle fonction (Tue ou Bloque)
+
+        // IA
+        const Sheep* target = nullptr;
+        float minDist = g_config["wolf_vision"];
+
+        for (const auto& s : ecosystem_sheeps) {
+            if (s.alive) {
+                float d = w.dist(s.pos);
+                if (d < minDist) { minDist = d; target = &s; }
+            }
+        }
+
+        if (target) {
+            sf::Vector2f dir = target->pos - w.pos;
+            float len = std::sqrt(dir.x*dir.x + dir.y*dir.y);
+            w.pos += (dir / len) * w.speed * dt;
+        } else {
+            sf::Vector2f wander = getWanderDir(i, g_simulationTime * 0.5f);
+            w.pos += wander * (w.speed * 0.6f) * dt;
+        }
+
+        w.eat(ecosystem_sheeps);
+
+        if (w.canReproduce()) {
+            for (size_t j = i + 1; j < ecosystem_wolves.size(); ++j) {
+                if (ecosystem_wolves[j].alive && ecosystem_wolves[j].canReproduce() && w.dist(ecosystem_wolves[j].pos) < 30.f) {
+                    babyWolves.emplace_back(Wolf(w.pos)); w.resetReproduction(); ecosystem_wolves[j].resetReproduction(); g_bornWolvesCount++; break;
+                }
+            }
+        }
+    }
+
+    // 3. MOUTONS
+    std::vector<Sheep> babySheeps;
+    for (size_t i = 0; i < ecosystem_sheeps.size(); ++i) {
+        Sheep& s = ecosystem_sheeps[i];
+        if (!s.alive) continue;
+
+        s.update(dt);
+        
+        for (auto& g : ecosystem_grass) {
+            if (g.alive && s.dist(g.pos) < 15.f) { g.alive = false; s.gainEnergy(20.f); }
+        }
+
+        // IA
+        sf::Vector2f moveDir{0.f, 0.f};
+        const Wolf* danger = nullptr;
+        float closestDanger = g_config["sheep_panic_dist"];
+
+        for (const auto& w : ecosystem_wolves) {
+            if (w.alive) {
+                float d = s.dist(w.pos);
+                if (d < closestDanger) { closestDanger = d; danger = &w; }
+            }
+        }
+
+        if (danger) {
+            sf::Vector2f flee = s.pos - danger->pos;
+            float len = std::sqrt(flee.x*flee.x + flee.y*flee.y);
+            if (len > 0) moveDir = (flee / len) * 1.5f;
+        } 
+        else {
+            float bestDist = g_config["sheep_vision_food"];
+            sf::Vector2f targetGrass = s.pos;
+            bool foundGrass = false;
+            
+            for (const auto& g : ecosystem_grass) {
+                if (g.alive) {
+                    float d = s.dist(g.pos);
+                    if (d < bestDist) { bestDist = d; targetGrass = g.pos; foundGrass = true; }
+                }
+            }
+            if (foundGrass) {
+                sf::Vector2f dir = targetGrass - s.pos;
+                float len = std::sqrt(dir.x*dir.x + dir.y*dir.y);
+                if(len > 0) moveDir = dir / len;
+            } else {
+                moveDir = getWanderDir(i + 100, g_simulationTime * 0.3f) * 0.5f;
+            }
+        }
+
+        s.pos += moveDir * s.speed * dt;
+        checkWorldBounds(s); // Utilise la nouvelle fonction (Tue ou Bloque)
+
+        if (s.canReproduce()) {
+            for (size_t j = i + 1; j < ecosystem_sheeps.size(); ++j) {
+                if (ecosystem_sheeps[j].alive && ecosystem_sheeps[j].canReproduce() && s.dist(ecosystem_sheeps[j].pos) < 30.f) {
+                    babySheeps.emplace_back(Sheep(s.pos)); s.resetReproduction(); ecosystem_sheeps[j].resetReproduction(); g_bornSheepCount++; break;
+                }
+            }
+        }
+    }
+
+    solveCollisions();
+
     for (auto& b : babySheeps) ecosystem_sheeps.push_back(b);
     for (auto& b : babyWolves) ecosystem_wolves.push_back(b);
 
-    // SUPPRESSION DES MORTS (et mise à jour des stats de décès)
+    ecosystem_grass.remove_if([](const Grass& g){ return !g.alive; });
     
-    // Herbe : On enlève juste l'herbe mangée
-    ecosystem_grass.erase(std::remove_if(ecosystem_grass.begin(), ecosystem_grass.end(), [](auto& g){return !g.alive;}), ecosystem_grass.end());
-    
-    // Moutons : On compte les morts avant de supprimer
     ecosystem_sheeps.erase(std::remove_if(ecosystem_sheeps.begin(), ecosystem_sheeps.end(), 
-        [](auto& s) {
-            if (!s.alive) { g_deadSheepCount++; return true; }
-            return false;
-        }
+        [](auto& s) { if (!s.alive) g_deadSheepCount++; return !s.alive; }
     ), ecosystem_sheeps.end());
 
-    // Loups : On compte les morts avant de supprimer
     ecosystem_wolves.erase(std::remove_if(ecosystem_wolves.begin(), ecosystem_wolves.end(), 
-        [](auto& w) {
-            if (!w.alive) { g_deadWolvesCount++; return true; }
-            return false;
-        }
+        [](auto& w) { if (!w.alive) g_deadWolvesCount++; return !w.alive; }
     ), ecosystem_wolves.end());
-
-    // SÉCURITÉ ANTI-EXTINCTION
-    // Si tout le monde est mort, on relance la simulation pour ne pas regarder un écran vide.
-    if (ecosystem_sheeps.empty() && ecosystem_wolves.empty()) initEcosystem();
 }
 
-// -------------------------------------------------------------------------
-// OUTILS & STATISTIQUES
-// -------------------------------------------------------------------------
-
-/**
- * @brief Récupère les statistiques complètes de l'écosystème.
- * @details Cette fonction rassemble les données actuelles (populations vivantes)
- * et les données historiques (morts et naissances cumulés) pour les envoyer au HUD.
- * * @return EcosystemStats Une structure contenant les 7 compteurs du jeu.
- */
 EcosystemStats getEcosystemStats() {
-    // On retourne une structure initialisée directement avec les valeurs (Liste d'initialisation).
-    return {
-        // --- 1. POPULATIONS ACTUELLES (Vivants) ---
-        // On utilise static_cast<int> car .size() renvoie un "unsigned long" (size_t),
-        // mais notre structure attend des "int" classiques.
-        static_cast<int>(ecosystem_grass.size()),  // Nombre d'herbes
-        static_cast<int>(ecosystem_sheeps.size()), // Nombre de moutons vivants
-        static_cast<int>(ecosystem_wolves.size()), // Nombre de loups vivants
-
-        // --- 2. STATISTIQUES CUMULÉES (Historique) ---
-        // Ces variables globales comptent depuis le lancement du jeu.
-        g_deadSheepCount,  // Total des moutons morts
-        g_deadWolvesCount, // Total des loups morts
-        g_bornSheepCount,  // Total des naissances de moutons
-        g_bornWolvesCount  // Total des naissances de loups
-    };
+    return { (int)ecosystem_grass.size(), (int)ecosystem_sheeps.size(), (int)ecosystem_wolves.size(), g_deadSheepCount, g_deadWolvesCount, g_bornSheepCount, g_bornWolvesCount, g_simulationTime };
 }
 
-// -------------------------------------------------------------------------
-// AFFICHAGE
-// -------------------------------------------------------------------------
-
-/**
- * @brief Dessine tout le monde.
- */
 void ecosystemDraw(sf::RenderWindow& window) {
     for (auto& g : ecosystem_grass) if (g.alive) g.draw(window);
     for (auto& s : ecosystem_sheeps) if (s.alive) s.draw(window);

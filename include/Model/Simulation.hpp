@@ -1,54 +1,44 @@
 /**
  * @file Simulation.hpp
- * @author Gael Guinaliu (rodez.gael@gmail.com)
- * @brief Interface publique de l'écosystème : init, update, draw
- * @details Déclare les 3 fonctions principales pour contrôler la simulation complète
- * @version 0.1
- * @date 2026-01-03
- * 
- * @copyright Copyright (c) 2026
+ * @brief Interface publique de l'écosystème
  */
 
-// Empêche d'inclure ce fichier deux fois.
 #pragma once
 
 #ifndef SIMULATION_HPP
 #define SIMULATION_HPP
 
-// Inclut SFML Graphics pour les références sf::RenderWindow et les graphiques.
 #include <SFML/Graphics.hpp>
 
-// ===== INTERFACE DE L'ÉCOSYSTÈME =====
-// Fonctions centrales pour gérer la simulation complète (herbe, moutons, loups).
-
-// Initialise l'écosystème : crée les premières herbes, moutons et loups à des positions aléatoires.
-// À appeler une seule fois au démarrage de la simulation.
+// Initialise l'écosystème
 void initEcosystem();
 
-// Met à jour toute la logique de l'écosystème :
-// - Mouvements, IA (recherche d'herbe, fuite des loups)
-// - Régénération, chasse, alimentation
-// - Suppression des entités mortes et respawn automatique.
+// Définit les limites du monde (A appeler au début ou au resize)
+void setWorldBounds(float xMin, float xMax, float yMin, float yMax);
+
+// Met à jour toute la logique
 void ecosystemUpdate(float dt);
 
-// Dessine toutes les entités vivantes (herbes, moutons, loups) dans la fenêtre.
-// Positionne automatiquement les formes SFML aux bonnes coordonnées.
+// Dessine toutes les entités
 void ecosystemDraw(sf::RenderWindow& window);
 
-// Structure pour transporter les stats facilement
+// Structure pour transporter les stats
 struct EcosystemStats {
     int grass;
     int sheep;
     int wolves;
-
-    // Ajoute ces deux lignes :
-    int deadSheep;   // Compteur total de moutons morts
-    int deadWolves;  // Compteur total de loups morts
-    int bornSheep;   // Compteur de naissances moutons
-    int bornWolves;  // Compteur de naissances loups
+    
+    // Stats cumulées
+    int deadSheep;
+    int deadWolves;
+    int bornSheep;
+    int bornWolves;
+    
+    // Temps
+    float timeElapsed;
 };
 
-// Fonction pour récupérer les statistiques actuelles
+// Fonction pour récupérer les statistiques
 EcosystemStats getEcosystemStats();
 
-#endif // SIMULATION_HPP
+#endif
