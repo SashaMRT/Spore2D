@@ -1,95 +1,106 @@
 /**
  * @file Hud.hpp
  * @author Sasha Marie te Rehorst (sasha.marieterehorst@gmail.com)
- * @brief Déclaration de la classe Hud : le schéma du gestionnaire d'informations.
- * @details Gère l'affichage de l'interface utilisateur (Textes, FPS, Infos).
- * @version 0.1
- * @date 2025-12-31
- * 
- * @copyright Copyright (c) 2025
- * 
+ * @author Gael Guinaliu (rodez.gael@gmail.com)
+ * @brief Déclaration de la classe Hud (Heads-Up Display).
+ * @details Gère l'affichage de l'interface utilisateur latérale :
+ * Textes, Statistiques (Vivants, Morts, Naissances), FPS et Titres.
+ * @version 0.5
+ * @date 2026-01-05
  */
 
-// Empêche d'inclure ce fichier deux fois.
 #pragma once
 
-// Inclusion de notre bibliothèque SFML.
-// Elle permet l'utilisation de sf.
+// Inclusion de la bibliothèque graphique SFML
 #include <SFML/Graphics.hpp>
-
-// Inclusion de la bibliothèque std.
 #include <iostream>
 
 /**
  * @class Hud
- * @brief Interface gérant les information durant la simulation.
- * 
+ * @brief Classe gérant la partie Interface Utilisateur (Menu de gauche).
  */
 class Hud {
-// Accessible depuis l'extérieur (par le main.cpp par exemple).
 public:
-    // Le Constructeur : Il porte TOUJOURS le même nom que la classe.
-    // C'est la fonction appelée automatiquement à la création de l'objet.
-    // Dans notre cas, c'est la fonction qui défini les informations.
+    // -------------------------------------------------------------------------
+    // CONSTRUCTEUR
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Constructeur par défaut.
+     * @details Initialise les variables membres (comme la largeur du menu).
+     * Note : SFML 3 demande que les sf::Text soient initialisés avec une font dans le constructeur.
+     */
     Hud();
     
+    // -------------------------------------------------------------------------
+    // MÉTHODES PRINCIPALES
+    // -------------------------------------------------------------------------
+
     /**
-     * @brief Initialise les ressources du HUD.
-     * @param windowSize La taille totale de la fenêtre (pour calculer la hauteur).
-     * Charge la police d'écriture et configure les textes.
-     * @return true (succés sinon false).
+     * @brief Charge les ressources et configure l'apparence du HUD.
+     * @details Charge la police d'écriture (font.ttf ou arial.ttf) et positionne
+     * les textes et le fond gris sur l'écran.
+     * @param windowSize La taille actuelle de la fenêtre (pour adapter la hauteur du fond).
+     * @return true si l'initialisation a réussi, false sinon (ex: police introuvable).
      */
     bool init(sf::Vector2u windowSize);
 
     /**
-     * @brief Met à jour les données affichées (FPS + Entités + Statistiques globales).
-     * @details Cette fonction reçoit toutes les données du jeu (Vivants, Morts, Naissances)
-     * pour mettre à jour les textes du menu à gauche.
-     * * @param fps Le nombre d'images par seconde (fluidité du jeu).
-     * @param grass Nombre d'herbes actuellement sur le terrain.
+     * @brief Met à jour les données affichées à l'écran.
+     * @details Cette fonction reçoit toutes les statistiques du jeu pour actualiser le texte.
+     * * @param fps Le nombre d'images par seconde (Performance).
+     * @param grass Nombre d'herbes vivantes.
      * @param sheep Nombre de moutons vivants.
      * @param wolves Nombre de loups vivants.
      * @param deadS Nombre total de moutons morts (Cimetière).
      * @param deadW Nombre total de loups morts (Cimetière).
-     * @param bornS Nombre total de bébés moutons nés (Naissances).
-     * @param bornW Nombre total de bébés loups nés (Naissances).
+     * @param bornS Nombre total de naissances de moutons.
+     * @param bornW Nombre total de naissances de loups.
      */   
     void update(float fps, int grass, int sheep, int wolves, int deadS, int deadW, int bornS, int bornW);
+
     /**
-     * @brief Dessine l'interface sur la fenêtre.
-     * @param window Reprend la bibliothèque de rendu SFML.
-     * pour le rendu de la fenêtre.
+     * @brief Dessine l'interface complète sur la fenêtre.
+     * @details Affiche le fond, puis les textes par-dessus.
+     * @param window La fenêtre de rendu SFML.
      */
     void draw(sf::RenderWindow& window);
 
+    // -------------------------------------------------------------------------
+    // UTILITAIRES & GETTERS
+    // -------------------------------------------------------------------------
+
     /**
-     * @brief Récupère la largeur du menu.
+     * @brief Récupère la largeur fixe du menu.
+     * @details Utilisé par le Renderer pour savoir où commencer à dessiner la zone de jeu.
      * @return float La largeur en pixels.
-     * Retourne la largeur du menu pour éviter que le jeu ne soit caché par l'interface.
      */
     float getWidth() const { return m_width; }
 
     /**
-     * @brief Recalcule la taille de la zone de jeu
-     * lors d'un redimensionnement de fenêtre.
+     * @brief Adapte le HUD lors du redimensionnement de la fenêtre.
+     * @details Étire le fond gris pour qu'il touche toujours le bas de la fenêtre.
      * @param newSize La nouvelle taille de la fenêtre.
      */
     void onResize(sf::Vector2u newSize);
 
-// Accessible seulement par les méthodes de cette classe.
 private:
-    // La police d'écriture (sinon bug sur Windows).
-    sf::Font m_font;
-    // Le texte affichant les FPS.
-    sf::Text m_textFps;
-    // Le titre.
-    sf::Text m_textTitle;
-    // Les stats.
-    sf::Text m_textInfo;
-    // Le rendu du menu.
-    sf::RectangleShape m_background;
-    // La barre de soulignement.
-    sf::RectangleShape m_separator;
-    // La largeur définie du menu.
-    float m_width;
+    // -------------------------------------------------------------------------
+    // MEMBRES PRIVÉS
+    // -------------------------------------------------------------------------
+
+    // --- Ressources ---
+    sf::Font m_font;        ///< La police d'écriture (chargée depuis un fichier .ttf).
+
+    // --- Éléments Textuels ---
+    sf::Text m_textFps;     ///< Affiche les frames par seconde (en haut à gauche).
+    sf::Text m_textTitle;   ///< Le titre "STATISTIQUES".
+    sf::Text m_textInfo;    ///< Le bloc de texte principal contenant toutes les stats.
+
+    // --- Éléments Graphiques ---
+    sf::RectangleShape m_background; ///< Le rectangle gris vertical (fond du menu).
+    sf::RectangleShape m_separator;  ///< La petite barre blanche sous le titre.
+
+    // --- Propriétés ---
+    float m_width;          ///< Largeur du menu en pixels (fixe).
 };

@@ -1,16 +1,14 @@
 /**
  * @file Entity.hpp
+ * @author Sasha Marie te Rehorst (sasha.marieterehorst@gmail.com)
  * @author Gael Guinaliu (rodez.gael@gmail.com)
- * @brief Classe de base commune : position, énergie, affichage pour toutes les entités
- * @details Fournit les propriétés essentielles (pos, energy, shape), méthode dist() 
- * et IA de déplacement pour herbe/moutons/loups
- * @version 0.1
- * @date 2026-01-04
- * 
- * @copyright Copyright (c) 2026
+ * @brief Classe de base pour toutes les entités vivantes.
+ * @details Cette structure sert de parent commun aux Moutons et aux Loups. 
+ * Elle contient les données partagées (Position, Énergie, Apparence) et des outils mathématiques (Distance).
+ * @version 0.5
+ * @date 2026-01-05
  */
 
-// Empêche d'inclure ce fichier deux fois.
 #pragma once
 
 #ifndef ENTITY_HPP
@@ -20,25 +18,56 @@
 #include <vector>
 #include <cmath>
 
-// Classe de base commune aux entités (Herbe, Mouton, Loup)
+/**
+ * @struct Entity
+ * @brief Structure de base représentant un objet vivant dans la simulation.
+ */
 struct Entity {
-    sf::Vector2f pos;           // Position sur la carte
-    float energy, maxEnergy;    // Énergie actuelle ,Énergie maximale
-    bool alive;                 // Indique si l’entité est en vie
-    sf::CircleShape shape;      // Forme affichée à l’écran
+    // -------------------------------------------------------------------------
+    // ATTRIBUTS PUBLICS
+    // -------------------------------------------------------------------------
     
-     // Constructeur : initialise position, couleur, rayon et énergie
+    sf::Vector2f pos;           ///< Position actuelle (x, y) sur la carte.
+    float energy;               ///< Énergie actuelle (Vie). Si <= 0, l'entité meurt.
+    float maxEnergy;            ///< Capacité maximale de l'estomac.
+    bool alive;                 ///< État de vie (true = vivant, false = mort/à supprimer).
+    sf::CircleShape shape;      ///< L'objet graphique SFML (Cercle).
+    
+    // -------------------------------------------------------------------------
+    // CONSTRUCTEUR
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Construit une entité générique.
+     * @param p Position de départ.
+     * @param maxE Énergie maximale (et initiale).
+     * @param col Couleur de l'entité.
+     * @param r Rayon du cercle (Taille).
+     */
     Entity(sf::Vector2f p, float maxE, sf::Color col, float r=10.f) 
         : pos(p), maxEnergy(maxE), energy(maxE), alive(true) {
+        
         shape.setRadius(r);
         shape.setFillColor(col);
-        shape.setOrigin(sf::Vector2f(r/2, r/2)); // Centre le cercle
+        
+        // CORRECTION : Pour centrer parfaitement le cercle sur sa position (pos),
+        // l'origine doit être égale au rayon.
+        shape.setOrigin(sf::Vector2f(r, r)); 
     }
     
-    // Calcule la distance entre l’entité et une autre position
+    // -------------------------------------------------------------------------
+    // OUTILS MATHÉMATIQUES
+    // -------------------------------------------------------------------------
+
+    /**
+     * @brief Calcule la distance euclidienne vers une cible.
+     * @param o La position de l'autre objet (Target).
+     * @return float La distance en pixels.
+     */
     float dist(const sf::Vector2f& o) const {
         float dx = pos.x - o.x;
         float dy = pos.y - o.y;
+        // Théorème de Pythagore : a² + b² = c²
         return std::sqrt(dx*dx + dy*dy);
     }
 };

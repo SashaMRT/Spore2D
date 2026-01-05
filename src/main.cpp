@@ -1,6 +1,7 @@
 /**
  * @file main.cpp
  * @author Sasha Marie te Rehorst (sasha.marieterehorst@gmail.com)
+ * @author Gael Guinaliu (rodez.gael@gmail.com)
  * @brief Point d'entrée du programme Spore2D.
  * @details Instancie les objets et lance le moteur.
  * @version 0.1
