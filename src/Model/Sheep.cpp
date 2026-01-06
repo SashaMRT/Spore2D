@@ -3,116 +3,139 @@
  * @author Sasha Marie te Rehorst (sasha.marieterehorst@gmail.com)
  * @author Gael Guinaliu (rodez.gael@gmail.com)
  * @brief Implémentation de la classe Sheep (Proie).
- * @details Gère la logique spécifique aux moutons : métabolisme (faim), reproduction et affichage.
- * L'intelligence artificielle de déplacement est gérée dans Simulation.cpp.
- * @version 0.4
- * @date 2026-01-05
+ * @version 0.6
+ * @date 2026-01-06
  */
 
 #include "../../include/Model/Sheep.hpp"
 #include "../../include/Model/Grass.hpp"
-#include <cmath> // Pour les calculs mathématiques si besoin
+#include "../../include/Model/Wolf.hpp" // [IMPORTANT] Pour voir les loups
+#include <cmath>
 
 // -------------------------------------------------------------------------
 // CONSTRUCTEUR
 // -------------------------------------------------------------------------
 
-/**
- * @brief Construit un nouveau Mouton.
- * @details Initialise un mouton blanc, de taille 7, avec une vitesse moyenne.
- * @param position La position de départ (x, y) dans le monde.
- */
 Sheep::Sheep(sf::Vector2f position) 
-    : Entity(position, 100.f, sf::Color(240, 240, 240), 7.f) // BLANC (Proche du blanc pur)
+    : Entity(position, 100.f, sf::Color(240, 240, 240), 7.f) // Blanc
 {
-    // Attributs spécifiques
-    speed = 60.f;        // Vitesse de déplacement (plus lent que le loup)
-    energy = 50.f;       // Énergie de départ
-    m_reproCooldown = 2.0f; // Petit délai à la naissance avant de pouvoir se reproduire
+    speed = 60.f;        
+    energy = 50.f;       
+    m_reproCooldown = 2.0f; 
 }
 
 // -------------------------------------------------------------------------
 // MISE À JOUR (UPDATE)
 // -------------------------------------------------------------------------
 
-/**
- * @brief Met à jour l'état interne du mouton.
- * @param dt Temps écoulé depuis la dernière image (Delta Time).
- */
 void Sheep::update(float dt) {
-    if (!alive) return; // Si mort, on ne fait rien
+    if (!alive) return;
 
-    // Perte d'énergie (Métabolisme de base)
-    // Le mouton perd 2 points d'énergie par seconde en existant.
+    // Métabolisme
     energy -= 2.0f * dt; 
     
-    // Vérification de la mort (Famine)
     if (energy <= 0) {
-        alive = false; // Meurt de faim
+        alive = false;
     }
 
-    // Mise à jour du temps avant prochaine reproduction
     if (m_reproCooldown > 0) {
         m_reproCooldown -= dt;
     }
 }
 
 // -------------------------------------------------------------------------
-// ALIMENTATION
+// INTELLIGENCE ARTIFICIELLE (DÉPLACEMENT)
 // -------------------------------------------------------------------------
 
-/**
- * @brief Gestion de l'alimentation (Placeholder).
- * @details Cette fonction est vide car la logique de collision et de suppression de l'herbe
- * est gérée directement dans Simulation.cpp pour des raisons de performance et de gestion de mémoire.
- */
-void Sheep::eat(std::vector<Grass>& grasses) {
-    // Géré par la simulation principalement
+void Sheep::moveAI(float dt, const std::vector<Wolf>& wolves, const std::list<Grass>& grass, float simTime) {
+    if (!alive) return;
+
+    sf::Vector2f moveDir{0.f, 0.f};
+    
+    // --- 1. DÉTECTION DU DANGER (PRIORITÉ ABSOLUE) ---
+    const Wolf* danger = nullptr;
+    float closestDanger = 120.0f; // Distance de panique
+
+    for (const auto& w : wolves) {
+        if (w.alive) {
+            float d = dist(w.pos);
+            if (d < closestDanger) {
+                closestDanger = d;
+                danger = &w;
+            }
+        }
+    }
+
+    if (danger) {
+        // FUITE : Vecteur opposé au danger
+        sf::Vector2f flee = pos - danger->pos;
+        float len = std::sqrt(flee.x*flee.x + flee.y*flee.y);
+        
+        if (len > 0) {
+            // Fuite rapide (x1.5)
+            moveDir = (flee / len) * 1.5f; 
+        }
+    } 
+    else {
+        // --- 2. RECHERCHE DE NOURRITURE ---
+        float bestDist = 250.0f; // Vision nourriture
+        sf::Vector2f targetGrass = pos;
+        bool foundGrass = false;
+        
+        for (const auto& g : grass) {
+            if (g.alive) {
+                float d = dist(g.pos);
+                if (d < bestDist) {
+                    bestDist = d;
+                    targetGrass = g.pos;
+                    foundGrass = true;
+                }
+            }
+        }
+
+        if (foundGrass) {
+            // MIAM : On va vers l'herbe
+            sf::Vector2f dir = targetGrass - pos;
+            float len = std::sqrt(dir.x*dir.x + dir.y*dir.y);
+            if(len > 0) moveDir = dir / len;
+        } else {
+            // --- 3. ERRANCE TRANQUILLE ---
+            long long seed = (long long)this % 100;
+            float angle = std::sin(simTime * 0.3f + seed) * 3.14159f * 2.0f;
+            sf::Vector2f wander(std::cos(angle), std::sin(angle));
+            
+            // Marche lente (x0.5)
+            moveDir = wander * 0.5f; 
+        }
+    }
+
+    // Application du mouvement
+    pos += moveDir * speed * dt;
 }
 
-/**
- * @brief Permet au mouton de regagner de l'énergie (quand il mange de l'herbe).
- * @param amount Quantité d'énergie gagnée.
- */
+// -------------------------------------------------------------------------
+// AUTRES MÉTHODES
+// -------------------------------------------------------------------------
+
+void Sheep::eat(std::vector<Grass>& grasses) {
+    // (Géré par Simulation.cpp pour les collisions simples)
+}
+
 void Sheep::gainEnergy(float amount) {
     energy += amount;
-    
-    // On ne peut pas dépasser le maximum (Capacité de l'estomac)
-    if (energy > maxEnergy) {
-        energy = maxEnergy;
-    }
+    if (energy > maxEnergy) energy = maxEnergy;
 }
 
-// -------------------------------------------------------------------------
-// REPRODUCTION
-// -------------------------------------------------------------------------
-
-/**
- * @brief Vérifie si le mouton remplit les conditions pour avoir un bébé.
- * @return true si Vivant, Énergie > 60 et Cooldown terminé.
- */
 bool Sheep::canReproduce() const {
-    // Les moutons se reproduisent plus facilement que les loups (seuil 60 vs 80)
     return alive && energy > 60.f && m_reproCooldown <= 0.f;
 }
 
-/**
- * @brief Applique les coûts de la reproduction après une naissance.
- */
 void Sheep::resetReproduction() {
-    energy -= 30.f;      // Coût énergétique de la naissance
-    m_reproCooldown = 5.f; // Pause de 5 secondes avant le prochain bébé
+    energy -= 30.f;      
+    m_reproCooldown = 5.f; 
 }
 
-// -------------------------------------------------------------------------
-// RENDU
-// -------------------------------------------------------------------------
-
-/**
- * @brief Affiche le mouton à l'écran.
- */
 void Sheep::draw(sf::RenderWindow& window) {
-    // Mise à jour de la position du cercle SFML
     shape.setPosition(pos);
     window.draw(shape);
 }

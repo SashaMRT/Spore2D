@@ -2,11 +2,9 @@
  * @file Entity.hpp
  * @author Sasha Marie te Rehorst (sasha.marieterehorst@gmail.com)
  * @author Gael Guinaliu (rodez.gael@gmail.com)
- * @brief Classe de base pour toutes les entités vivantes.
- * @details Cette structure sert de parent commun aux Moutons et aux Loups. 
- * Elle contient les données partagées (Position, Énergie, Apparence) et des outils mathématiques (Distance).
- * @version 0.5
- * @date 2026-01-05
+ * @brief Classe de base commune.
+ * @version 0.8
+ * @date 2026-01-06
  */
 
 #pragma once
@@ -15,61 +13,51 @@
 #define ENTITY_HPP
 
 #include <SFML/Graphics.hpp>
-#include <vector>
 #include <cmath>
 
 /**
  * @struct Entity
- * @brief Structure de base représentant un objet vivant dans la simulation.
+ * @brief Structure de base représentant un objet vivant.
  */
 struct Entity {
     // -------------------------------------------------------------------------
-    // ATTRIBUTS PUBLICS
+    // ATTRIBUTS
     // -------------------------------------------------------------------------
-    
-    sf::Vector2f pos;           ///< Position actuelle (x, y) sur la carte.
-    float energy;               ///< Énergie actuelle (Vie). Si <= 0, l'entité meurt.
-    float maxEnergy;            ///< Capacité maximale de l'estomac.
-    bool alive;                 ///< État de vie (true = vivant, false = mort/à supprimer).
-    sf::CircleShape shape;      ///< L'objet graphique SFML (Cercle).
+    sf::Vector2f pos;           ///< Position (x, y).
+    float energy;               ///< Énergie actuelle.
+    float maxEnergy;            ///< Énergie max.
+    bool alive;                 ///< État de vie.
+    float radius;               ///< Rayon de l'entité (taille physique).
+    sf::CircleShape shape;      ///< Apparence (Cercle).
     
     // -------------------------------------------------------------------------
     // CONSTRUCTEUR
     // -------------------------------------------------------------------------
-
-    /**
-     * @brief Construit une entité générique.
-     * @param p Position de départ.
-     * @param maxE Énergie maximale (et initiale).
-     * @param col Couleur de l'entité.
-     * @param r Rayon du cercle (Taille).
-     */
-    Entity(sf::Vector2f p, float maxE, sf::Color col, float r=10.f) 
-        : pos(p), maxEnergy(maxE), energy(maxE), alive(true) {
-        
-        shape.setRadius(r);
-        shape.setFillColor(col);
-        
-        // CORRECTION : Pour centrer parfaitement le cercle sur sa position (pos),
-        // l'origine doit être égale au rayon.
-        shape.setOrigin(sf::Vector2f(r, r)); 
-    }
+    Entity(sf::Vector2f p, float maxE, sf::Color col, float r=10.f);
     
     // -------------------------------------------------------------------------
-    // OUTILS MATHÉMATIQUES
+    // MÉTHODES
     // -------------------------------------------------------------------------
 
+    // Calcule la distance vers un point
+    float dist(const sf::Vector2f& o) const;
+
     /**
-     * @brief Calcule la distance euclidienne vers une cible.
-     * @param o La position de l'autre objet (Target).
-     * @return float La distance en pixels.
+     * @brief Vérifie si l'entité touche les bords du monde.
+     * @details Bloque l'entité si elle dépasse un peu, ou la tue si le mur l'écrase.
+     * @param xMin Limite gauche.
+     * @param xMax Limite droite.
+     * @param yMin Limite haute.
+     * @param yMax Limite basse.
      */
-    float dist(const sf::Vector2f& o) const {
-        float dx = pos.x - o.x;
-        float dy = pos.y - o.y;
-        // Théorème de Pythagore : a² + b² = c²
-        return std::sqrt(dx*dx + dy*dy);
-    }
+    void checkBounds(float xMin, float xMax, float yMin, float yMax);
+
+    /**
+     * @brief Gère la collision physique avec une autre entité.
+     * @details Si les deux entités se chevauchent, elles se repoussent mutuellement.
+     * @param other L'autre entité avec qui on entre en collision.
+     */
+    void resolveCollision(Entity& other);
 };
 
 #endif

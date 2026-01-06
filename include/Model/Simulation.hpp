@@ -3,11 +3,9 @@
  * @author Sasha Marie te Rehorst (sasha.marieterehorst@gmail.com)
  * @author Gael Guinaliu (rodez.gael@gmail.com)
  * @brief Interface globale de gestion de l'écosystème.
- * @details Ce fichier agit comme le "contrôleur" du modèle. Il expose les fonctions
- * permettant de mettre à jour la logique du jeu, de dessiner les entités et de récupérer les stats.
- * Il ne contient pas de classe, mais des fonctions libres pour simplifier l'accès.
- * @version 0.5
- * @date 2026-01-05
+ * @details Ce fichier agit comme le "contrôleur" du modèle.
+ * @version 0.6
+ * @date 2026-01-06
  */
 
 #pragma once
@@ -18,19 +16,30 @@
 #include <SFML/Graphics.hpp>
 
 // -------------------------------------------------------------------------
+// DÉFINITIONS DES TYPES (C'est ici que manquait l'erreur !)
+// -------------------------------------------------------------------------
+
+/**
+ * @enum EntityType
+ * @brief Liste des types d'entités que le joueur peut faire apparaître.
+ */
+enum class EntityType {
+    Grass,  ///< Herbe
+    Sheep,  ///< Mouton
+    Wolf    ///< Loup
+};
+
+// -------------------------------------------------------------------------
 // FONCTIONS DE CONTRÔLE
 // -------------------------------------------------------------------------
 
 /**
  * @brief Initialise ou Réinitialise l'écosystème.
- * @details Vide les listes existantes (Moutons, Loups, Herbe) et génère une nouvelle
- * population aléatoire. Appelé au démarrage et lors d'un Reset [R].
  */
 void initEcosystem();
 
 /**
  * @brief Définit les murs invisibles du monde.
- * @details Permet à la simulation de savoir quand un animal touche le bord de la fenêtre.
  * @param xMin Bordure gauche.
  * @param xMax Bordure droite.
  * @param yMin Bordure haute.
@@ -40,8 +49,7 @@ void setWorldBounds(float xMin, float xMax, float yMin, float yMax);
 
 /**
  * @brief Met à jour toute la logique du jeu (Cerveau).
- * @details Gère l'IA, les déplacements, la faim, la reproduction et la mort.
- * @param dt Le temps écoulé depuis la dernière image (Delta Time) pour fluidifier les mouvements.
+ * @param dt Le temps écoulé depuis la dernière image (Delta Time).
  */
 void ecosystemUpdate(float dt);
 
@@ -51,6 +59,14 @@ void ecosystemUpdate(float dt);
  */
 void ecosystemDraw(sf::RenderWindow& window);
 
+/**
+ * @brief Fait apparaître une entité manuellement (Mode Dieu).
+ * @param type Le type d'entité (Herbe, Mouton, Loup).
+ * @param x Position X.
+ * @param y Position Y.
+ */
+void spawnEntity(EntityType type, float x, float y);
+
 // -------------------------------------------------------------------------
 // STATISTIQUES
 // -------------------------------------------------------------------------
@@ -58,22 +74,18 @@ void ecosystemDraw(sf::RenderWindow& window);
 /**
  * @struct EcosystemStats
  * @brief Structure conteneur pour transférer les données de jeu vers le HUD.
- * @details Regroupe toutes les variables importantes en un seul paquet.
  */
 struct EcosystemStats {
-    // Populations actuelles (Vivants)
-    int grass;  ///< Nombre d'herbes.
-    int sheep;  ///< Nombre de moutons.
-    int wolves; ///< Nombre de loups.
+    int grass;
+    int sheep;
+    int wolves;
     
-    // Statistiques cumulées (Historique)
-    int deadSheep;  ///< Total des moutons morts.
-    int deadWolves; ///< Total des loups morts.
-    int bornSheep;  ///< Total des naissances de moutons.
-    int bornWolves; ///< Total des naissances de loups.
+    int deadSheep;
+    int deadWolves;
+    int bornSheep;
+    int bornWolves;
     
-    // Temps
-    float timeElapsed; ///< Temps total simulé en secondes.
+    float timeElapsed;
 };
 
 /**

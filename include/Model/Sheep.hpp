@@ -3,24 +3,22 @@
  * @author Sasha Marie te Rehorst (sasha.marieterehorst@gmail.com)
  * @author Gael Guinaliu (rodez.gael@gmail.com)
  * @brief Déclaration de la classe Sheep (La Proie).
- * @details Définit les attributs et méthodes spécifiques aux moutons :
- * gestion de l'énergie, interaction avec l'herbe et reproduction.
- * @version 0.5
- * @date 2026-01-05
+ * @version 0.6
+ * @date 2026-01-06
  */
 
 #pragma once
 
 #include <SFML/Graphics.hpp>
 #include <vector>
+#include <list> // [AJOUT] Nécessaire pour std::list<Grass>
 #include "Entity.hpp"
 
 // -------------------------------------------------------------------------
 // FORWARD DECLARATION
 // -------------------------------------------------------------------------
-// On annonce au compilateur que la classe "Grass" existe.
-// Cela évite d'inclure "Grass.hpp" ici et réduit les dépendances circulaires.
 class Grass;
+class Wolf; // [AJOUT] Le mouton doit connaître l'existence du loup pour le fuir
 
 /**
  * @class Sheep
@@ -35,47 +33,33 @@ public:
     Sheep(sf::Vector2f position);
 
     /**
-     * @brief Met à jour les statistiques internes (Faim, Cooldown).
-     * @param dt Temps écoulé (Delta Time).
+     * @brief Met à jour les statistiques internes.
+     * @param dt Temps écoulé.
      */
     void update(float dt);
     
+    /**
+     * @brief [NOUVEAU] Cerveau du Mouton (Intelligence Artificielle).
+     * @details Gère la fuite (priorité 1), la faim (priorité 2) et l'errance (priorité 3).
+     * @param dt Temps écoulé.
+     * @param wolves Liste des prédateurs à éviter.
+     * @param grass Liste de la nourriture à manger.
+     * @param simTime Temps global.
+     */
+    void moveAI(float dt, const std::vector<Wolf>& wolves, const std::list<Grass>& grass, float simTime);
+
     /**
      * @brief Affiche le sprite du mouton.
      * @param window La fenêtre de rendu.
      */
     void draw(sf::RenderWindow& window);
     
-    // -------------------------------------------------------------------------
-    // ALIMENTATION
-    // -------------------------------------------------------------------------
-
-    /**
-     * @brief Logique de recherche de nourriture.
-     * @details (Note : La logique principale est gérée dans Simulation.cpp pour l'instant).
-     * @param grasses Liste des herbes disponibles.
-     */
+    // Gestion nourriture (partielle)
     void eat(std::vector<Grass>& grasses);
-
-    /**
-     * @brief Augmente l'énergie du mouton.
-     * @param amount Quantité d'énergie gagnée.
-     */
     void gainEnergy(float amount);
 
-    // -------------------------------------------------------------------------
-    // REPRODUCTION
-    // -------------------------------------------------------------------------
-
-    /**
-     * @brief Vérifie les conditions pour la naissance d'un bébé.
-     * @return true si assez d'énergie et cooldown terminé.
-     */
+    // Reproduction
     bool canReproduce() const; 
-
-    /**
-     * @brief Applique le coût énergétique après une naissance.
-     */
     void resetReproduction();  
 
 public:

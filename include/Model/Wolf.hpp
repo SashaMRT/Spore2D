@@ -3,10 +3,9 @@
  * @author Sasha Marie te Rehorst (sasha.marieterehorst@gmail.com)
  * @author Gael Guinaliu (rodez.gael@gmail.com)
  * @brief Déclaration de la classe Wolf (Le Prédateur).
- * @details Définit les attributs et méthodes spécifiques aux loups :
- * vitesse de course, logique de chasse, et conditions de reproduction.
- * @version 0.5
- * @date 2026-01-05
+ * @details Définit les attributs et méthodes spécifiques aux loups.
+ * @version 0.6
+ * @date 2026-01-06
  */
 
 #pragma once
@@ -18,9 +17,7 @@
 // -------------------------------------------------------------------------
 // FORWARD DECLARATION
 // -------------------------------------------------------------------------
-// On dit au compilateur : "La classe Sheep existe, fais-moi confiance".
-// Cela permet d'utiliser "Sheep" dans les arguments de fonction sans inclure "Sheep.hpp" ici.
-// C'est INDISPENSABLE car Sheep.hpp inclut déjà Wolf.hpp (boucle infinie sinon).
+// Indispensable pour éviter l'erreur "Wolf a besoin de Sheep qui a besoin de Wolf..."
 class Sheep; 
 
 /**
@@ -42,18 +39,23 @@ public:
     void update(float dt);
     
     /**
+     * @brief [NOUVEAU] Cerveau du Loup (Intelligence Artificielle).
+     * @details Décide où aller : soit chasser le mouton le plus proche, soit errer.
+     * @param dt Temps écoulé.
+     * @param sheeps La liste des moutons (cibles potentielles).
+     * @param simTime Temps global de la simulation (pour l'errance aléatoire).
+     */
+    void moveAI(float dt, const std::vector<Sheep>& sheeps, float simTime);
+
+    /**
      * @brief Affiche le sprite du loup.
      * @param window La fenêtre de rendu.
      */
     void draw(sf::RenderWindow& window);
     
-    /**
-     * @brief Logique de déplacement vers la proie.
-     * @details Cherche le mouton le plus proche et avance vers lui.
-     * @param sheeps Liste des moutons (cibles potentielles).
-     */
-    void hunt(const std::vector<Sheep>& sheeps);
-
+    // (L'ancienne méthode hunt est intégrée dans moveAI maintenant, mais on peut la garder ou l'enlever)
+    // Pour simplifier, moveAI remplace la logique de déplacement de hunt.
+    
     /**
      * @brief Logique d'alimentation.
      * @details Vérifie la collision avec les moutons et les tue si contact.
