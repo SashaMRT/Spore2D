@@ -2,14 +2,15 @@
  * @file Wolf.cpp
  * @author Sasha Marie te Rehorst (sasha.marieterehorst@gmail.com)
  * @author Gael Guinaliu (rodez.gael@gmail.com)
- * @brief Implémentation de la classe Wolf (Prédateur).
- * @version 0.6
+ * @brief Implémentation optimisée du Loup.
+ * @version 0.7
  * @date 2026-01-06
  */
 
 #include "../../include/Model/Wolf.hpp"
-#include "../../include/Model/Sheep.hpp" // Nécessaire pour voir les moutons
-#include <cmath> // Pour std::sqrt, std::cos, std::sin
+#include "../../include/Model/Sheep.hpp"
+#include <cmath>
+#include <algorithm> // Pour std::min
 
 // -------------------------------------------------------------------------
 // CONSTRUCTEUR
@@ -21,87 +22,83 @@ Wolf::Wolf(sf::Vector2f position)
     shape.setOutlineThickness(2);
     shape.setOutlineColor(sf::Color(100, 0, 0)); 
     
-    speed = 95.f;     // Rapide
-    energy = 60.f;    // Énergie moyenne
+    speed = 95.f;     
+    energy = 60.f;    
     m_reproCooldown = 5.0f;
 }
 
 // -------------------------------------------------------------------------
-// MISE À JOUR (UPDATE)
+// LOGIQUE
 // -------------------------------------------------------------------------
 
 void Wolf::update(float dt) {
     if (!alive) return;
 
     // Métabolisme
-    energy -= 3.0f * dt; 
-    
-    // Mort de faim
-    if (energy <= 0) {
-        alive = false;
-        energy = 0;
-    }
+    energy -= 3.0f * dt;
+    if (energy <= 0) alive = false;
 
-    // Cooldown reproduction
-    if (m_reproCooldown > 0) {
-        m_reproCooldown -= dt;
-    }
+    // Gestion du temps
+    if (m_reproCooldown > 0) m_reproCooldown -= dt;
 }
-
-// -------------------------------------------------------------------------
-// INTELLIGENCE ARTIFICIELLE (DÉPLACEMENT)
-// -------------------------------------------------------------------------
 
 void Wolf::moveAI(float dt, const std::vector<Sheep>& sheeps, float simTime) {
     if (!alive) return;
 
-    // 1. CHERCHER LA CIBLE
+    // 1. RECHERCHE DE CIBLE (Mouton le plus proche)
     const Sheep* target = nullptr;
-    float minDist = 400.f; // Vision du loup
+    float minDist = 400.f; // Portée de vision
 
     for (const auto& s : sheeps) {
-        if (s.alive) {
-            float d = dist(s.pos);
-            if (d < minDist) {
-                minDist = d;
-                target = &s;
-            }
+        if (!s.alive) continue; // On ignore les morts
+
+        float d = dist(s.pos);
+        if (d < minDist) {
+            minDist = d;
+            target = &s;
         }
     }
 
-    // 2. SE DÉPLACER
+    // 2. DÉPLACEMENT
+    sf::Vector2f moveDir(0.f, 0.f);
+
     if (target) {
-        // Mode Chasse : On court vers la cible
-        sf::Vector2f dir = target->pos - pos;
-        float len = std::sqrt(dir.x*dir.x + dir.y*dir.y);
-        
-        if (len > 0) {
-            pos += (dir / len) * speed * dt; 
-        }
-    } else {
-        // Mode Errance : On se balade
-        // Astuce : On utilise l'adresse mémoire (this) pour que chaque loup ait un mouvement unique
+        // CHASSE : Vecteur normalisé vers la cible
+        sf::Vector2f diff = target->pos - pos;
+        if (minDist > 0.1f) moveDir = diff / minDist;
+    } 
+    else {
+        // ERRANCE : Mouvement sinusoïdal pseudo-aléatoire
+        // On utilise l'adresse mémoire (this) comme graine unique pour chaque loup
         long long seed = (long long)this % 100; 
-        float angle = std::sin(simTime * 0.5f + seed) * 3.14159f * 2.0f;
-        sf::Vector2f wander(std::cos(angle), std::sin(angle));
-
-        // Vitesse réduite quand on erre (60%)
-        pos += wander * (speed * 0.6f) * dt;
+        float angle = std::sin(simTime * 0.5f + seed) * 6.28f; // 2*PI approx
+        
+        moveDir = {std::cos(angle), std::sin(angle)};
+        speed *= 0.6f; // Ralentit quand il erre (temporairement pour ce calcul)
     }
+
+    pos += moveDir * speed * dt;
+    
+    // On remet la vitesse normale si elle a été modifiée par l'errance
+    if (!target) speed /= 0.6f; 
 }
 
 // -------------------------------------------------------------------------
-// ACTIONS (MANGER / REPRODUIRE)
+// ACTIONS
 // -------------------------------------------------------------------------
 
 void Wolf::eat(std::vector<Sheep>& sheeps) {
     if (!alive) return;
 
     for (auto& s : sheeps) {
+        // Collision simple (rayon loup + rayon mouton approx 20px)
         if (s.alive && dist(s.pos) < 20.f) { 
-            s.alive = false;  // Miam
-            energy += 50.f; 
+            s.alive = false;       // Miam
+            energy += 50.f;        // Gain d'énergie
             if (energy > maxEnergy) energy = maxEnergy;
+            
+            break; // OPTIMISATION : Un loup ne mange qu'un mouton à la fois par frame.
+                   // On sort de la boucle immédiatement.
         }
     }
 }
