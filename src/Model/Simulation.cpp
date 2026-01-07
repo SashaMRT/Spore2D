@@ -1,41 +1,30 @@
 /**
  * @file Simulation.cpp
- * @brief Gestion du moteur physique et des limites du monde.
+ * @brief Moteur gérant la chaîne alimentaire : Plante -> Bactérie -> Poisson -> Requin.
  */
 
-// AUCUN INCLUDE (PCH)
+// AUCUN INCLUDE ICI (Géré par CMake)
 
 static float g_xMin = 0.f, g_xMax = 1000.f;
 static float g_yMin = 0.f, g_yMax = 1000.f;
 static float g_simulationTime = 0.f;
 
-static std::list<Grass> ecosystem_grass; 
-static std::vector<Sheep> ecosystem_sheeps;
-static std::vector<Wolf> ecosystem_wolves;
+static std::list<Grass> ecosystem_plants; 
+static std::vector<Sheep> ecosystem_prey; // Bactéries et Poissons
+static std::vector<Wolf> ecosystem_sharks;
 
-static int g_deadSheep = 0, g_deadWolves = 0;
-static int g_bornSheep = 0, g_bornWolves = 0;
+static int g_deadPrey = 0, g_deadSharks = 0;
+static int g_bornPrey = 0, g_bornSharks = 0;
 
-/**
- * @brief Définit les limites strictes du terrain de jeu.
- */
 void setWorldBounds(float xMin, float xMax, float yMin, float yMax) {
-    g_xMin = xMin;
-    g_xMax = xMax;
-    g_yMin = yMin;
-    g_yMax = yMax;
+    g_xMin = xMin; g_xMax = xMax;
+    g_yMin = yMin; g_yMax = yMax;
 }
 
-/**
- * @brief Génère une position aléatoire strictement à l'intérieur des bordures.
- */
 static sf::Vector2f randomPos() {
     float margin = 30.f;
-    float rangeX = std::max(1.f, g_xMax - g_xMin - (margin * 2));
-    float rangeY = std::max(1.f, g_yMax - g_yMin - (margin * 2));
-    
-    float x = g_xMin + margin + (rand() % (int)rangeX);
-    float y = g_yMin + margin + (rand() % (int)rangeY);
+    float x = g_xMin + margin + (rand() % (int)std::max(1.f, g_xMax - g_xMin - margin * 2));
+    float y = g_yMin + margin + (rand() % (int)std::max(1.f, g_yMax - g_yMin - margin * 2));
     return {x, y};
 }
 
@@ -47,113 +36,133 @@ void solveCollisions() {
             }
         }
     };
-    check(ecosystem_sheeps);
-    check(ecosystem_wolves);
+    check(ecosystem_prey);
+    check(ecosystem_sharks);
 }
 
 void initEcosystem() {
-    ecosystem_grass.clear();
-    ecosystem_sheeps.clear();
-    ecosystem_wolves.clear();
+    ecosystem_plants.clear();
+    ecosystem_prey.clear();
+    ecosystem_sharks.clear();
     g_simulationTime = 0.f;
-    g_deadSheep = 0; g_deadWolves = 0;
-    g_bornSheep = 0; g_bornWolves = 0;
+    g_deadPrey = 0; g_deadSharks = 0;
+    g_bornPrey = 0; g_bornSharks = 0;
 
-    for (int i = 0; i < 50; i++) ecosystem_grass.emplace_back(randomPos());
-    for (int i = 0; i < 20; i++) ecosystem_sheeps.emplace_back(randomPos());
-    for (int i = 0; i < 3;  i++) ecosystem_wolves.emplace_back(randomPos());
+    for (int i = 0; i < 60; i++) ecosystem_plants.emplace_back(randomPos());
+    for (int i = 0; i < 25; i++) ecosystem_prey.emplace_back(randomPos());
+    for (int i = 0; i < 2;  i++) ecosystem_sharks.emplace_back(randomPos());
 }
 
 void ecosystemUpdate(float dt) {
     static bool _init = [](){ srand(time(NULL)); initEcosystem(); return true; }();
     g_simulationTime += dt;
 
-    // 1. HERBE
-    if ((rand() % 100) < 5) ecosystem_grass.emplace_back(randomPos());
-    for (auto it = ecosystem_grass.begin(); it != ecosystem_grass.end(); ) {
-        if (it->pos.x < g_xMin || it->pos.x > g_xMax || it->pos.y < g_yMin || it->pos.y > g_yMax) {
-            it = ecosystem_grass.erase(it); 
-        } else { ++it; }
-    }
+    // 1. PLANTES (Apparition)
+    if ((rand() % 100) < 7) ecosystem_plants.emplace_back(randomPos());
 
-    // 2. LOUPS
-    std::vector<Wolf> babyWolves;
-    for (size_t i = 0; i < ecosystem_wolves.size(); ++i) {
-        Wolf& w = ecosystem_wolves[i];
+    // 2. REQUINS (Mangent les poissons)
+    std::vector<Wolf> babySharks;
+    for (size_t i = 0; i < ecosystem_sharks.size(); ++i) {
+        Wolf& w = ecosystem_sharks[i];
         if (!w.alive) continue;
         w.update(dt);
-        w.moveAI(dt, ecosystem_sheeps, g_simulationTime);
-        w.eat(ecosystem_sheeps); 
-        w.checkBounds(g_xMin, g_xMax, g_yMin, g_yMax); // CRITIQUE
+        w.moveAI(dt, ecosystem_prey, g_simulationTime);
+        w.eat(ecosystem_prey); // Mange uniquement les poissons (Level 2)
+        w.checkBounds(g_xMin, g_xMax, g_yMin, g_yMax);
 
         if (w.canReproduce()) {
-            for (size_t j = i + 1; j < ecosystem_wolves.size(); ++j) {
-                Wolf& partner = ecosystem_wolves[j];
-                if (partner.alive && partner.canReproduce() && w.dist(partner.pos) < 40.f) {
-                    babyWolves.emplace_back(w.pos);
-                    w.resetReproduction();
-                    partner.resetReproduction();
-                    g_bornWolves++;
-                    break;
+            for (size_t j = i + 1; j < ecosystem_sharks.size(); ++j) {
+                if (ecosystem_sharks[j].alive && ecosystem_sharks[j].canReproduce() && w.dist(ecosystem_sharks[j].pos) < 40.f) {
+                    babySharks.emplace_back(w.pos);
+                    w.resetReproduction(); ecosystem_sharks[j].resetReproduction();
+                    g_bornSharks++; break;
                 }
             }
         }
     }
 
-    // 3. MOUTONS
-    std::vector<Sheep> babySheeps;
-    for (size_t i = 0; i < ecosystem_sheeps.size(); ++i) {
-        Sheep& s = ecosystem_sheeps[i];
+    // 3. PROIES (Bactéries & Poissons mangent les plantes)
+    std::vector<Sheep> babyPrey;
+    std::vector<Wolf> newSharksFromEvolution;
+
+    for (size_t i = 0; i < ecosystem_prey.size(); ++i) {
+        Sheep& s = ecosystem_prey[i];
         if (!s.alive) continue;
         s.update(dt);
-        s.moveAI(dt, ecosystem_wolves, ecosystem_grass, g_simulationTime);
-        for (auto& g : ecosystem_grass) {
-            if (s.dist(g.pos) < 15.f) { g.alive = false; s.eatGrass(); break; }
+        s.moveAI(dt, ecosystem_sharks, ecosystem_plants, g_simulationTime);
+        
+        for (auto& p : ecosystem_plants) {
+            if (s.dist(p.pos) < 15.f) { 
+                p.alive = false; 
+                s.eatGrass(); // Gère l'évolution interne (Niveau 1 -> 2)
+                break; 
+            }
         }
-        s.checkBounds(g_xMin, g_xMax, g_yMin, g_yMax); // CRITIQUE
+
+        // EVOLUTION ULTIME : Poisson (Niveau 2) -> Requin (Niveau 3)
+        if (s.getLevel() == 3) {
+            newSharksFromEvolution.emplace_back(s.pos);
+            s.alive = false; // Le poisson "disparaît" pour devenir un requin
+            continue;
+        }
+
+        s.checkBounds(g_xMin, g_xMax, g_yMin, g_yMax);
 
         if (s.canReproduce()) {
-            for (size_t j = i + 1; j < ecosystem_sheeps.size(); ++j) {
-                Sheep& partner = ecosystem_sheeps[j];
-                if (partner.alive && partner.canReproduce() && s.dist(partner.pos) < 30.f) {
-                    babySheeps.emplace_back(s.pos);
-                    s.resetReproduction();
-                    partner.resetReproduction();
-                    g_bornSheep++;
-                    break;
+            for (size_t j = i + 1; j < ecosystem_prey.size(); ++j) {
+                if (ecosystem_prey[j].alive && ecosystem_prey[j].canReproduce() && s.dist(ecosystem_prey[j].pos) < 30.f) {
+                    babyPrey.emplace_back(s.pos);
+                    s.resetReproduction(); ecosystem_prey[j].resetReproduction();
+                    g_bornPrey++; break;
                 }
             }
         }
     }
 
     solveCollisions();
-    ecosystem_sheeps.insert(ecosystem_sheeps.end(), babySheeps.begin(), babySheeps.end());
-    ecosystem_wolves.insert(ecosystem_wolves.end(), babyWolves.begin(), babyWolves.end());
 
-    auto cleanDead = [](auto& vec, int& counter) {
+    // Intégration des nouveaux-nés et évolutions
+    ecosystem_prey.insert(ecosystem_prey.end(), babyPrey.begin(), babyPrey.end());
+    ecosystem_sharks.insert(ecosystem_sharks.end(), babySharks.begin(), babySharks.end());
+    ecosystem_sharks.insert(ecosystem_sharks.end(), newSharksFromEvolution.begin(), newSharksFromEvolution.end());
+
+    // Nettoyage
+    auto clean = [](auto& vec, int& counter) {
         vec.erase(std::remove_if(vec.begin(), vec.end(), [&](auto& e){
-            if (!e.alive) { counter++; return true; }
-            return false;
+            if (!e.alive) { counter++; return true; } return false;
         }), vec.end());
     };
-    cleanDead(ecosystem_sheeps, g_deadSheep);
-    cleanDead(ecosystem_wolves, g_deadWolves);
-    ecosystem_grass.remove_if([](const Grass& g){ return !g.alive; });
+    clean(ecosystem_prey, g_deadPrey);
+    clean(ecosystem_sharks, g_deadSharks);
+    ecosystem_plants.remove_if([](const Grass& p){ return !p.alive; });
 }
 
 EcosystemStats getEcosystemStats() {
-    int lambsCount = 0;
-    for (const auto& s : ecosystem_sheeps) if (s.getLevel() == 1) lambsCount++;
-    int pupsCount = 0;
-    for (const auto& w : ecosystem_wolves) if (w.getLevel() == 1) pupsCount++;
+    int bac = 0;
+    int fish = 0;
+    
+    // On compte les niveaux dans le vecteur des proies
+    for (const auto& s : ecosystem_prey) {
+        if (s.getLevel() == 1) bac++; 
+        else if (s.getLevel() == 2) fish++;
+    }
 
-    return { (int)ecosystem_grass.size(), (int)ecosystem_sheeps.size(), lambsCount,
-             (int)ecosystem_wolves.size(), pupsCount, g_deadSheep, g_deadWolves, 
-             g_bornSheep, g_bornWolves, g_simulationTime };
+    // Retourne la structure en respectant l'ordre défini dans Simulation.hpp
+    return { 
+        (int)ecosystem_plants.size(), 
+        (int)ecosystem_prey.size(), 
+        bac, 
+        fish, 
+        (int)ecosystem_sharks.size(), 
+        g_deadPrey, 
+        g_deadSharks, 
+        g_bornPrey, 
+        g_bornSharks, 
+        g_simulationTime 
+    };
 }
-
 void ecosystemDraw(sf::RenderWindow& window) {
-    for (auto& g : ecosystem_grass) g.draw(window);
-    for (auto& s : ecosystem_sheeps) if (s.alive) s.draw(window);
-    for (auto& w : ecosystem_wolves) if (w.alive) w.draw(window);
+    for (auto& p : ecosystem_plants) p.draw(window);
+    for (auto& s : ecosystem_prey) if (s.alive) s.draw(window);
+    for (auto& w : ecosystem_sharks) if (w.alive) w.draw(window);
 }

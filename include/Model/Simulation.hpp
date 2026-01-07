@@ -2,8 +2,8 @@
  * @file Simulation.hpp
  * @author Sasha Marie te Rehorst
  * @author Gael Guinaliu
- * @brief Interface de la simulation avec gestion stricte des bordures.
- * @version 1.1
+ * @brief Interface de la simulation marine.
+ * @version 2.0
  */
 
 #pragma once
@@ -18,21 +18,26 @@
  * @brief Statistiques pour le HUD.
  */
 struct EcosystemStats {
-    int grass;
-    int sheep;
-    int lambs;
-    int wolves;
-    int pups;
-    int deadSheep;
-    int deadWolves;
-    int bornSheep;
-    int bornWolves;
+    int plants;
+    int preyTotal;
+    int bacteria;
+    int fish;
+    int sharks;
+    int deadPrey;
+    int deadSharks;
+    int bornPrey;
+    int bornSharks;
     float simulationTime;
 };
 
-enum class EntityType { Grass, Sheep, Wolf };
+/**
+ * @enum EntityType
+ * @brief Types d'entités créables.
+ */
+enum class EntityType { Plant, Bacteria, Fish, Shark };
 
-// Fonctions globales
+// --- PROTOTYPES DES FONCTIONS GLOBALES ---
+// Ces fonctions doivent être déclarées ici pour être visibles par les autres fichiers .cpp
 void initEcosystem();
 void setWorldBounds(float xMin, float xMax, float yMin, float yMax);
 void ecosystemUpdate(float dt);

@@ -1,102 +1,79 @@
 /**
  * @file Sheep.cpp
- * @brief Implémentation de la croissance de l'agneau.
+ * @brief Implémentation de la Bactérie (Niv 1) évoluant en Poisson (Niv 2).
  */
 
 // AUCUN INCLUDE ICI
 
 Sheep::Sheep(sf::Vector2f position) 
-    : Entity(position, 60.f, sf::Color(240, 240, 240), 5.f) 
+    : Entity(position, 50.f, sf::Color(0, 255, 100, 150), 4.f) // Vert translucide (Bactérie)
 {
-    speed = 50.f;        
-    energy = 60.f;       
-    m_reproCooldown = 2.0f;
-    m_eatenGrass = 0;
-    m_level = 1; 
+    speed = 40.f; energy = 50.f; m_reproCooldown = 3.0f;
+    m_eatenGrass = 0; m_level = 1; 
 }
 
 void Sheep::update(float dt) {
     if (!alive) return;
-    float loss = (m_level == 1) ? 1.5f : 2.5f;
-    energy -= loss * dt; 
+    float loss = (m_level == 1) ? 1.0f : 2.5f;
+    energy -= loss * dt;
     if (energy <= 0) alive = false;
     if (m_reproCooldown > 0) m_reproCooldown -= dt;
 }
 
-void Sheep::moveAI(float dt, const std::vector<Wolf>& wolves, const std::list<Grass>& grass, float simTime) {
+void Sheep::moveAI(float dt, const std::vector<Wolf>& sharks, const std::list<Grass>& plants, float simTime) {
     if (!alive) return;
     sf::Vector2f moveDir(0.f, 0.f);
+    
+    // 1. FUIR LES REQUINS (Uniquement si on est un Poisson)
     const Wolf* danger = nullptr;
-    float minDangerSq = 120.f * 120.f; 
-
-    for (const auto& w : wolves) {
-        if (!w.alive) continue;
-        float dx = pos.x - w.pos.x;
-        float dy = pos.y - w.pos.y;
-        float distSq = dx*dx + dy*dy;
-        if (distSq < minDangerSq) { minDangerSq = distSq; danger = &w; }
+    if (m_level == 2) {
+        float minDangerSq = 150.f * 150.f;
+        for (const auto& w : sharks) {
+            float d = (pos.x - w.pos.x)*(pos.x - w.pos.x) + (pos.y - w.pos.y)*(pos.y - w.pos.y);
+            if (d < minDangerSq) { minDangerSq = d; danger = &w; }
+        }
     }
 
     if (danger) {
         sf::Vector2f diff = pos - danger->pos;
-        float len = std::sqrt(minDangerSq); 
-        float panicMult = (m_level == 1) ? 1.2f : 1.5f;
-        if (len > 0.1f) moveDir = (diff / len) * panicMult;
-    } 
-    else {
-        sf::Vector2f targetPos = pos;
-        bool found = false;
-        float minFoodSq = 300.f * 300.f;
-        for (const auto& g : grass) {
-            if (!g.alive) continue;
-            float dx = pos.x - g.pos.x;
-            float dy = pos.y - g.pos.y;
-            float distSq = dx*dx + dy*dy;
-            if (distSq < minFoodSq) { minFoodSq = distSq; targetPos = g.pos; found = true; }
+        float len = std::sqrt((pos.x - danger->pos.x)*(pos.x - danger->pos.x) + (pos.y - danger->pos.y)*(pos.y - danger->pos.y));
+        if (len > 0.1f) moveDir = (diff / len) * 1.8f;
+    } else {
+        // 2. CHERCHER DES PLANTES
+        sf::Vector2f targetPos = pos; bool found = false; float minSq = 350.f * 350.f;
+        for (const auto& p : plants) {
+            float d = (pos.x - p.pos.x)*(pos.x - p.pos.x) + (pos.y - p.pos.y)*(pos.y - p.pos.y);
+            if (d < minSq) { minSq = d; targetPos = p.pos; found = true; }
         }
         if (found) {
-            sf::Vector2f diff = targetPos - pos;
-            float len = std::sqrt(minFoodSq);
+            sf::Vector2f diff = targetPos - pos; float len = std::sqrt(minSq);
             if (len > 0.1f) moveDir = diff / len;
         } else {
             long long seed = (long long)this % 100;
-            float angle = std::sin(simTime * 0.3f + seed) * 6.28f;
+            float angle = std::sin(simTime * 0.4f + seed) * 6.28f;
             moveDir = {std::cos(angle), std::sin(angle)};
-            moveDir *= 0.5f; 
         }
     }
     pos += moveDir * speed * dt;
 }
 
 void Sheep::eatGrass() {
-    energy += 20.f;
-    if (energy > maxEnergy) energy = maxEnergy;
+    energy += 25.f; if (energy > maxEnergy) energy = maxEnergy;
+    m_eatenGrass++;
 
-    if (m_level == 1) {
-        m_eatenGrass++;
-        if (m_eatenGrass >= 5) {
-            m_level = 2; 
-            speed = 70.f;       
-            maxEnergy = 100.f;  
-            energy = maxEnergy;
-            radius = 9.f;       
-            shape.setRadius(radius);
-            shape.setOrigin({radius, radius});
-            std::cout << "Un AGNEAU devient un MOUTON !" << std::endl;
+    if (m_eatenGrass >= 5) {
+        m_eatenGrass = 0;
+        m_level++;
+        if (m_level == 2) { // Devenir Poisson
+            speed = 80.f; maxEnergy = 100.f; radius = 8.f;
+            shape.setRadius(radius); shape.setOrigin({radius, radius});
+            shape.setFillColor(sf::Color(0, 150, 255)); // Bleu
+            std::cout << "EVOLUTION : Poisson !" << std::endl;
         }
+        // Le passage au niveau 3 (Requin) est capté par Simulation.cpp
     }
 }
 
-bool Sheep::canReproduce() const {
-    return alive && m_level == 2 && energy > 60.f && m_reproCooldown <= 0.f;
-}
-
-void Sheep::resetReproduction() {
-    energy -= 30.f;      
-    m_reproCooldown = 5.f; 
-}
-
-void Sheep::draw(sf::RenderWindow& window) {
-    shape.setPosition(pos);
-    window.draw(shape);
-}
+bool Sheep::canReproduce() const { return alive && m_level >= 2 && energy > 70.f && m_reproCooldown <= 0.f; }
+void Sheep::resetReproduction() { energy -= 40.f; m_reproCooldown = 6.f; }
+void Sheep::draw(sf::RenderWindow& window) { shape.setPosition(pos); window.draw(shape); }
