@@ -7,7 +7,6 @@
  * @date 2026-01-06
  */
 
-#include "../../include/Model/Grass.hpp"
 
 // -------------------------------------------------------------------------
 // CONSTRUCTEUR
@@ -39,10 +38,10 @@ void Grass::update(float dt) {
 void Grass::draw(sf::RenderWindow& window) {
     if (!alive) return;
 
-    // 1. Dessin de la tige principale
+    // Dessin de la tige principale
     window.draw(shape);
 
-    // 2. OPTIMISATION : Forme statique (créée une seule fois)
+    // OPTIMISATION : Forme statique (créée une seule fois)
     static sf::CircleShape leaf(3.f);
     static bool initialized = false;
 

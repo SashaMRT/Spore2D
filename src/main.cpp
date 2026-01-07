@@ -11,13 +11,6 @@
  * 
  */
 
-// Inclusion de la bibliothèque std.
-#include <iostream>
-
-// Inclusion de notre bibliothèque Application.
-// Elle permet l'utilisation de la classe Applications et de ces méthodes.
-#include "../include/Core/Application.hpp"
-
 /**
  * @brief Fonction principale du programme.
  * * @param argc Le nombre d'arguments passés au programme.

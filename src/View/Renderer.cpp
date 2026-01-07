@@ -7,11 +7,6 @@
  * @date 2026-01-05
  */
 
-#include "../../include/View/Renderer.hpp"
-#include "../../include/Model/Simulation.hpp"
-#include <cstdlib>
-#include <ctime>
-#include <algorithm> // Pour std::max
 
 // -------------------------------------------------------------------------
 // CONSTRUCTEUR
@@ -30,10 +25,9 @@ void Renderer::init(sf::Vector2u windowSize, float hudWidth) {
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     // Style du terrain (Noir avec bordure grise)
-    m_gameArea.setFillColor(sf::Color::Black);
+    m_gameArea.setFillColor(sf::Color(0, 105, 148)); // Bleu océan
     m_gameArea.setOutlineThickness(-2.f);
-    m_gameArea.setOutlineColor(sf::Color(100, 100, 100));
-
+    m_gameArea.setOutlineColor(sf::Color(127, 255, 212)); // Aquamarine pour l'écume
     // Calcul de la taille et lancement de la simulation
     onResize(windowSize, hudWidth);
     initEcosystem();
